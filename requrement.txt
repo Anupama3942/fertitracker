@@ -1,0 +1,10 @@
+asgiref==3.13.0
+colorama==0.4.6
+Django==6.1.3
+django-environ==0.14.0
+pillow==13.0.0
+psycopg==3.3.8
+psycopg-binary==3.3.8
+qrcode==8.2
+sqlparse==0.6.1
+tzdata==2026.6
