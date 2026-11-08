@@ -33,7 +33,7 @@ class Season(models.Model):
     ) 
     
     def __str__(self):
-        return f"{self_name} ({self.status})"
+        return f"{self.name} ({self.status})"
     
 class FertilizerProduct(models.Model):
     name  = models.CharField(max_length=150)

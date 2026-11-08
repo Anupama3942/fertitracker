@@ -1,0 +1,46 @@
+{% extends 'base.html' %} {% block content %}
+<div
+  class="max-w-md mx-auto mt-12 bg-white p-8 rounded-lg shadow border border-slate-200"
+>
+  <h2 class="text-2xl font-bold text-emerald-800 mb-2 text-center">
+    FertiTracker Login
+  </h2>
+  <p class="text-sm text-slate-500 text-center mb-6">
+    End-to-End Fertilizer Distribution Traceability
+  </p>
+
+  {% if form.errors %}
+  <div class="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
+    Username හෝ Password වැරදියි. නැවත උත්සාහ කරන්න.
+  </div>
+  {% endif %}
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-medium mb-1">Username</label>
+      <input
+        type="text"
+        name="username"
+        required
+        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-emerald-600"
+      />
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Password</label>
+      <input
+        type="password"
+        name="password"
+        required
+        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-emerald-600"
+      />
+    </div>
+    <button
+      type="submit"
+      class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 rounded"
+    >
+      Sign In
+    </button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'base.html' %} {% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-slate-800">
+    Welcome, {{ user.username }}!
+  </h1>
+  <p class="text-slate-600">
+    Logged in as:
+    <span class="font-semibold text-emerald-700"
+      >{{ user.get_role_display }}</span
+    >
+  </p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+    <p class="text-sm text-slate-500">Registered Warehouses</p>
+    <p class="text-2xl font-bold text-emerald-700">{{ warehouse_count }}</p>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+    <p class="text-sm text-slate-500">Agrarian Service Centres (ASC)</p>
+    <p class="text-2xl font-bold text-emerald-700">{{ asc_count }}</p>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+    <p class="text-sm text-slate-500">Active Seasons</p>
+    <p class="text-2xl font-bold text-emerald-700">
+      {{ active_seasons.count }}
+    </p>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+    <p class="text-sm text-slate-500">Fertilizer Products</p>
+    <p class="text-2xl font-bold text-emerald-700">{{ products.count }}</p>
+  </div>
+</div>
+
+<div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+  <h2 class="text-lg font-bold mb-3">
+    Role Workspace ({{ user.get_role_display }})
+  </h2>
+  {% if user.role == 'ADMIN' %}
+  <p class="text-sm text-slate-600 mb-4">
+    ඔබට Admin Panel එක හරහා Warehouses, ASCs, Seasons, Fertilizer Products සහ
+    User Accounts කළමනාකරණය කළ හැක.
+  </p>
+  <a
+    href="/admin/"
+    class="inline-block bg-emerald-700 text-white px-4 py-2 rounded text-sm hover:bg-emerald-800"
+    >Open Admin Panel</a
+  >
+  {% elif user.role == 'WAREHOUSE_OFFICER' %}
+  <p class="text-sm text-slate-600">
+    Warehouse Batch & Dispatch කළමනාකරණ පිටුව (Iteration 3 හිදී සම්බන්ධ කෙරේ).
+  </p>
+  {% elif user.role == 'ASC_OFFICER' %}
+  <p class="text-sm text-slate-600">
+    Assigned ASC: <strong>{{ user.asc_centre|default:"Not Assigned" }}</strong>
+  </p>
+  {% elif user.role == 'FARMER' %}
+  <p class="text-sm text-slate-600">
+    ඔබේ පොහොර හිමිකම (Entitlement) සහ Dynamic QR කේතය ලබාගැනීමේ පිටුව.
+  </p>
+  {% elif user.role == 'AUDITOR' %}
+  <p class="text-sm text-slate-600">
+    විගණන වාර්තා (Audit Logs) සහ තොග පරීක්ෂා කිරීමේ පිටුව.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
