@@ -1,38 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="si">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FertiTracker - Fertilizer Traceability System</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+  <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
     <nav class="bg-emerald-800 text-white shadow-md">
       <div
-        class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center"
+        class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3"
       >
-        <a href="{% url 'dashboard' %}" class="text-xl font-bold tracking-wide"
-          >🌱 FertiTracker</a
+        <a
+          href="{% url 'dashboard' %}"
+          class="text-xl font-bold tracking-wide flex items-center gap-2"
+          >🌱 <span class="tracking-wider">FertiTracker</span></a
         >
 
         {% if user.is_authenticated %}
-        <div class="flex items-center gap-4 text-sm">
+        <div
+          class="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm"
+        >
           <!-- 1. Show the inventory page to all roles except farmers. -->
           {% if user.role != 'FARMER' %}
           <a
             href="{% url 'inventory_list' %}"
-            class="hover:underline font-medium"
-            >Inventory & Dispatches</a
-          >
-          <a
-            href="{% url 'inventory_list' %}"
-            class="hover:underline font-medium"
-            >Inventory & Dispatches</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Inventory</a
           >
           <a
             href="{% url 'reports_search' %}"
-            class="hover:underline font-medium"
-            >Reports & Search</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Reports</a
           >
           {% endif %}
 
@@ -40,70 +39,88 @@
           {% if user.role == 'FARMER' %}
           <a
             href="{% url 'farmer_dashboard' %}"
-            class="hover:underline font-medium"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
             >My QR & Quota</a
           >
           {% endif %}
 
           <!-- 3. Show the QR scanner page to ASC officers and administrators. -->
           {% if user.role == 'ADMIN' %}
-          <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
-            >ASC Scanner</a
+          <a
+            href="{% url 'asc_scanner' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Scanner</a
           >
           <a
             href="{% url 'manage_farmers' %}"
-            class="hover:underline font-medium"
-            >Farmers &amp; Bulk CSV</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Farmers</a
           >
           {% else %} {% if user.role == 'ASC_OFFICER' %}
-          <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
-            >ASC Scanner</a
+          <a
+            href="{% url 'asc_scanner' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Scanner</a
           >
           <a
             href="{% url 'manage_farmers' %}"
-            class="hover:underline font-medium"
-            >Farmers &amp; Bulk CSV</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Farmers</a
           >
           {% else %} {% if user.is_superuser %}
-          <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
-            >ASC Scanner</a
+          <a
+            href="{% url 'asc_scanner' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Scanner</a
           >
           <a
             href="{% url 'manage_farmers' %}"
-            class="hover:underline font-medium"
-            >Farmers &amp; Bulk CSV</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Farmers</a
           >
           {% endif %} {% endif %} {% endif %}
 
           <!-- 4. Show the audit log page to auditors and administrators. -->
           {% if user.role == 'ADMIN' %}
-          <a href="{% url 'audit_logs' %}" class="hover:underline font-medium"
+          <a
+            href="{% url 'audit_logs' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
             >Audit Logs</a
           >
           {% else %} {% if user.role == 'AUDITOR' %}
-          <a href="{% url 'audit_logs' %}" class="hover:underline font-medium"
+          <a
+            href="{% url 'audit_logs' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
             >Audit Logs</a
           >
           {% else %} {% if user.is_superuser %}
-          <a href="{% url 'audit_logs' %}" class="hover:underline font-medium"
+          <a
+            href="{% url 'audit_logs' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
             >Audit Logs</a
           >
           {% endif %} {% endif %} {% endif %}
 
-          <span class="bg-emerald-700 px-3 py-1 rounded-full">
+          <span
+            class="bg-emerald-900 px-2.5 py-1 rounded-full text-[11px] md:text-xs"
+          >
             {{ user.username }} | <strong>{{ user.get_role_display }}</strong>
             {% if user.asc_centre %} ({{ user.asc_centre.name }}){% endif %}
           </span>
 
           {% if user.role == 'ADMIN' or user.is_superuser %}
-          <a href="/admin/" class="hover:underline">Admin Panel</a>
+          <a
+            href="/admin/"
+            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
+            >Admin</a
+          >
           {% endif %}
 
           <form method="post" action="{% url 'logout' %}" class="inline">
             {% csrf_token %}
             <button
               type="submit"
-              class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
+              class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded font-semibold text-xs transition"
             >
               Logout
             </button>
@@ -113,14 +130,23 @@
       </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+    <main class="max-w-7xl mx-auto px-3 sm:px-4 py-4 md:py-6 flex-grow w-full">
       {% if messages %} {% for message in messages %}
       <div
-        class="mb-4 p-3 rounded bg-blue-100 text-blue-800 border border-blue-300"
+        class="mb-4 p-3 rounded-lg bg-blue-100 text-blue-900 border border-blue-300 text-xs md:text-sm font-medium shadow-sm"
       >
         {{ message }}
       </div>
       {% endfor %} {% endif %} {% block content %}{% endblock %}
     </main>
+
+    <footer
+      class="bg-slate-800 text-slate-400 text-center py-4 text-xs mt-auto"
+    >
+      <p>
+        FertiTracker - National Fertilizer Distribution Traceability System |
+        Mobile-Optimized Prototype
+      </p>
+    </footer>
   </body>
 </html>
