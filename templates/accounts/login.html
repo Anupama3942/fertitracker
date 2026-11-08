@@ -1,58 +1,79 @@
-{% extends 'base.html' %} {% block content %}
-<div
-  class="max-w-md mx-auto mt-12 bg-white p-8 rounded-lg shadow border border-slate-200"
->
-  <h2 class="text-2xl font-bold text-emerald-800 mb-2 text-center">
-    FertiTracker Login
-  </h2>
-  <p class="text-sm text-slate-500 text-center mb-6">
-    End-to-End Fertilizer Distribution Traceability
-  </p>
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-lg mx-auto mt-8 sm:mt-12 bg-white p-6 sm:p-10 rounded-2xl shadow-md border border-slate-200">
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 text-3xl mb-3 shadow-inner">
+      🌱
+    </div>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight">
+      {% trans "Login" %}
+    </h1>
+    <p class="text-slate-600 text-sm mt-1">
+      {% trans "Fertilizer Traceability System" %}
+    </p>
+  </div>
 
   {% if form.errors %}
-  <div class="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
-    Username or password is incorrect. Please try again.
+  <div class="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-sm font-medium flex items-center gap-2">
+    <span>⚠️</span>
+    <span>{% trans "Username or password is incorrect. Please try again." %}</span>
   </div>
   {% endif %}
 
-  <form method="post" class="space-y-4">
+  <form method="post" class="space-y-5">
     {% csrf_token %}
     <div>
-      <label class="block text-sm font-medium mb-1">Username</label>
+      <label class="block text-base font-semibold text-slate-800 mb-1.5">
+        {% trans "Username" %}
+      </label>
       <input
         type="text"
         name="username"
         required
-        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-emerald-600"
+        autocomplete="username"
+        placeholder="{% trans "Enter username or NIC" %}"
+        class="w-full border-2 border-slate-300 rounded-xl px-4 py-3.5 text-base focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 transition outline-none"
       />
     </div>
+
     <div>
-      <label class="block text-sm font-medium mb-1">Password</label>
+      <label class="block text-base font-semibold text-slate-800 mb-1.5">
+        {% trans "Password" %}
+      </label>
       <input
         type="password"
         name="password"
         required
-        class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-emerald-600"
+        autocomplete="current-password"
+        placeholder="••••••••"
+        class="w-full border-2 border-slate-300 rounded-xl px-4 py-3.5 text-base focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 transition outline-none"
       />
     </div>
+
+    <!-- Large Touch Action Button (min 48px height) -->
     <button
       type="submit"
-      class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 rounded"
+      class="w-full touch-target bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white text-lg font-bold py-3.5 px-6 rounded-xl shadow transition duration-150 transform active:scale-[0.99] flex items-center justify-center gap-2"
     >
-      Sign In
+      <span>🔑</span>
+      <span>{% trans "Login" %}</span>
     </button>
 
-    <div class="flex justify-between text-xs mt-2">
+    <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm font-medium">
       <a
         href="{% url 'activate_account' %}"
-        class="text-emerald-700 hover:underline"
-        >Activate Farmer Account</a
+        class="text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1"
       >
+        🌾 {% trans "Activate Farmer Account" %}
+      </a>
       <a
         href="{% url 'password_reset_request' %}"
-        class="text-slate-600 hover:underline"
-        >Forgot Password?</a
+        class="text-slate-500 hover:text-slate-700 hover:underline"
       >
+        {% trans "Forgot Password?" %}
+      </a>
     </div>
   </form>
 </div>

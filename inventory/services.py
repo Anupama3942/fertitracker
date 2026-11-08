@@ -4,7 +4,8 @@ import qrcode
 from decimal import Decimal
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from .models import StockDispatch, DispatchItem, ASCStock, StockMovement
+from .models import StockDispatch, DispatchItem, ASCStock, StockMovement, Discrepancy
+from distributions.models import AuditLog
 
 def generate_qr_base64(data_string):
     """
@@ -20,82 +21,120 @@ def generate_qr_base64(data_string):
 
 
 @transaction.atomic
-def confirm_dispatch_receiving(dispatch_id, officer_user, received_bags_dict, damaged_bags_dict):
+def confirm_dispatch_receiving(dispatch_id, officer_user, received_bags_dict, damaged_bags_dict, discrepancy_reason=""):
     """
-    FR-07, FR-08, FR-17: Atomic transaction for confirming the fertilizer stock received by an ASC officer.
+    Atomic transaction for receiving stock dispatch at the Agrarian Service Centre.
+    Enforces business rules:
+    - Only good bags are added to usable bags_on_hand.
+    - If damaged or missing > 0, requires a reason note, records Discrepancy, sets status to RECEIVED_WITH_DISCREPANCY.
+    - Strict row-level lock on dispatch and ASC stock.
+    - Creates append-only StockMovement and AuditLog records.
     """
-    # 1. Retrieve the dispatch record using a PostgreSQL row-level lock.
+    # 1. Row-level lock on dispatch
     dispatch = StockDispatch.objects.select_for_update().get(id=dispatch_id)
 
-    # Prevent the dispatch from being received again if it has already been received.
     if dispatch.status != StockDispatch.StatusChoices.DISPATCHED:
         raise ValidationError("This dispatch has already been received and confirmed.")
 
-    # Business Rule 12 / FR-20: Only an officer from the relevant ASC can receive the stock.
     if officer_user.role == 'ASC_OFFICER' and officer_user.asc_centre != dispatch.asc_centre:
         raise ValidationError("You are only authorized to receive stock for your assigned ASC.")
 
     has_discrepancy = False
+    total_damaged = 0
+    total_missing = 0
 
     for item in dispatch.items.select_related('batch__product').all():
-        rec_bags = int(received_bags_dict.get(str(item.id), 0))
-        dmg_bags = int(damaged_bags_dict.get(str(item.id), 0))
+        try:
+            rec_bags = int(received_bags_dict.get(str(item.id), 0))
+            dmg_bags = int(damaged_bags_dict.get(str(item.id), 0))
+        except (ValueError, TypeError):
+            raise ValidationError("Bag counts must be valid integers.")
 
-        # The number of received and damaged bags cannot exceed the total number of dispatched bags.
+        if rec_bags < 0 or dmg_bags < 0:
+            raise ValidationError("Received and damaged bag quantities cannot be negative.")
+
         if rec_bags + dmg_bags > item.dispatched_bags:
             raise ValidationError(
-                f"{item.batch.batch_number}: The total number of received ({rec_bags}) and damaged ({dmg_bags}) bags cannot exceed the number of dispatched bags ({item.dispatched_bags})."
+                f"{item.batch.batch_number}: Total of received ({rec_bags}) and damaged ({dmg_bags}) bags cannot exceed dispatched ({item.dispatched_bags})."
             )
 
         item.received_bags = rec_bags
         item.damaged_bags = dmg_bags
         item.save()
 
-        # Mark the dispatch as a discrepancy if the number of good bags received is less than the number dispatched.
-        if rec_bags != item.dispatched_bags:
+        missing_count = item.missing_bags
+        if dmg_bags > 0 or missing_count > 0:
             has_discrepancy = True
+            total_damaged += dmg_bags
+            total_missing += missing_count
 
         bag_weight = item.batch.product.bag_weight_kg
 
-        # 2. Retrieve or create the ASCStock record (FR-08).
+        # 2. Row-level lock on ASC stock
         asc_stock, _ = ASCStock.objects.select_for_update().get_or_create(
             asc_centre=dispatch.asc_centre,
             batch=item.batch,
             defaults={'bags_on_hand': 0}
         )
 
-        # Add only bags received in good condition to the stock available for issuing to farmers (bags_on_hand).
+        # Usable stock: ONLY good bags added
         if rec_bags > 0:
             asc_stock.bags_on_hand += rec_bags
             asc_stock.save()
 
-            # FR-17: Record the INBOUND stock movement.
             StockMovement.objects.create(
                 stock=asc_stock,
                 movement_type=StockMovement.MovementTypeChoices.INBOUND,
-                quantity_kg=Decimal(rec_bags) * bag_weight
+                quantity_kg=Decimal(rec_bags) * bag_weight,
+                dispatch=dispatch,
+                created_by=officer_user,
+                notes=f"Inbound receiving from Dispatch {dispatch.dispatch_reference}"
             )
 
-        # Record damaged bags separately as DAMAGED stock movements.
         if dmg_bags > 0:
             StockMovement.objects.create(
                 stock=asc_stock,
                 movement_type=StockMovement.MovementTypeChoices.DAMAGED,
-                quantity_kg=Decimal(dmg_bags) * bag_weight
+                quantity_kg=Decimal(dmg_bags) * bag_weight,
+                dispatch=dispatch,
+                created_by=officer_user,
+                notes=f"Damaged in transit - Dispatch {dispatch.dispatch_reference}"
             )
 
-        # Record missing bags as DISCREPANCY stock movements.
-        if item.missing_bags > 0:
+        if missing_count > 0:
             StockMovement.objects.create(
                 stock=asc_stock,
                 movement_type=StockMovement.MovementTypeChoices.DISCREPANCY,
-                quantity_kg=Decimal(item.missing_bags) * bag_weight
+                quantity_kg=Decimal(missing_count) * bag_weight,
+                dispatch=dispatch,
+                created_by=officer_user,
+                notes=f"Missing in transit - Dispatch {dispatch.dispatch_reference}"
             )
 
-    # 3. Update the final status of the dispatch.
-    dispatch.status = (
-        StockDispatch.StatusChoices.DISCREPANCY if has_discrepancy
-        else StockDispatch.StatusChoices.RECEIVED
-    )
+    # 3. Discrepancy handling
+    if has_discrepancy:
+        clean_reason = (discrepancy_reason or "").strip()
+        if not clean_reason:
+            raise ValidationError("A required note/reason must be provided when there is damaged or missing stock.")
+
+        Discrepancy.objects.create(
+            dispatch=dispatch,
+            damaged_bags=total_damaged,
+            missing_bags=total_missing,
+            reason=clean_reason,
+            recorded_by=officer_user
+        )
+        dispatch.status = StockDispatch.StatusChoices.RECEIVED_WITH_DISCREPANCY
+    else:
+        dispatch.status = StockDispatch.StatusChoices.RECEIVED
+
     dispatch.save()
+
+    # 4. Append-only Audit Log
+    AuditLog.objects.create(
+        user=officer_user,
+        action=f"DISPATCH_RECEIVED: {dispatch.dispatch_reference}",
+        details=f"Status: {dispatch.get_status_display()} | Good: {dispatch.items.first().received_bags if dispatch.items.exists() else 0}, Damaged: {total_damaged}, Missing: {total_missing}"
+    )
+
     return dispatch

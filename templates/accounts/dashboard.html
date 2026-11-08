@@ -45,11 +45,8 @@
         Batches past expiry date. Do not issue to farmers.
       </p>
       {% for st in expired_stocks %}
-      <div
-        class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-red-200"
-      >
-        {{ st.batch.batch_number }} ({{ st.asc_centre.name }}) - {{
-        st.bags_on_hand }} bags
+      <div class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-red-200">
+        {{ st.batch.batch_number }} ({{ st.asc_centre.name }}) - {{ st.bags_on_hand }} bags
       </div>
       {% endfor %}
     </div>
@@ -64,11 +61,8 @@
         Expiring within 30 days. Issue these batches first!
       </p>
       {% for st in near_expiry_stocks %}
-      <div
-        class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-amber-200"
-      >
-        {{ st.batch.batch_number }} (Exp: {{ st.batch.expiry_date }}) - {{
-        st.bags_on_hand }} bags
+      <div class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-amber-200">
+        {{ st.batch.batch_number }} (Exp: {{ st.batch.expiry_date }}) - {{ st.bags_on_hand }} bags
       </div>
       {% endfor %}
     </div>
@@ -252,13 +246,8 @@
       <div class="space-y-2">
         {% for log in recent_logs %}
         <div class="p-2 border-b text-xs font-mono flex justify-between">
-          <span
-            ><strong>{{ log.action }}</strong> ({{
-            log.user.username|default:"System" }})</span
-          >
-          <span class="text-slate-400"
-            >{{ log.timestamp|date:"M d, H:i" }}</span
-          >
+          <span><strong>{{ log.action }}</strong> ({{ log.user.username|default:"System" }})</span>
+          <span class="text-slate-400">{{ log.timestamp|date:"M d, H:i" }}</span>
         </div>
         {% endfor %}
       </div>

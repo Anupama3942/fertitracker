@@ -1,0 +1,454 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: FertiTracker 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-08 22:00+0530\n"
+"PO-Revision-Date: 2026-11-08 22:00+0530\n"
+"Language: ta\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "FertiTracker"
+msgstr "ஃபெர்டி ட்ராக்கர் (FertiTracker)"
+
+msgid "Fertilizer Traceability System"
+msgstr "உரக் கையிருப்பு மற்றும் விநியோகக் கண்காணிப்பு அமைப்பு"
+
+msgid "National Fertilizer Distribution Traceability System"
+msgstr "தேசிய உர விநியோகக் கண்காணிப்பு அமைப்பு"
+
+msgid "Inventory"
+msgstr "கையிருப்பு"
+
+msgid "Reports"
+msgstr "அறிக்கைகள்"
+
+msgid "My QR & Quota"
+msgstr "எனது QR & உரிமை அளவு"
+
+msgid "QR Scanner"
+msgstr "QR ஸ்கேனர்"
+
+msgid "Scanner"
+msgstr "ஸ்கேனர்"
+
+msgid "Farmers"
+msgstr "விவசாயிகள்"
+
+msgid "Audit Logs"
+msgstr "தணிக்கைப் பதிவுகள்"
+
+msgid "Admin"
+msgstr "நிர்வாகி"
+
+msgid "Logout"
+msgstr "வெளியேறு"
+
+msgid "Login"
+msgstr "உள்நுழைக"
+
+msgid "Username"
+msgstr "பயனர்பெயர்"
+
+msgid "Password"
+msgstr "கடவுச்சொல்"
+
+msgid "System Administrator"
+msgstr "கணினி நிர்வாகி"
+
+msgid "Warehouse Officer"
+msgstr "கிடங்கு அதிகாரி"
+
+msgid "ASC Officer"
+msgstr "விவசாய சேவை மைய அதிகாரி"
+
+msgid "Auditor"
+msgstr "தணிக்கையாளர்"
+
+msgid "Farmer"
+msgstr "விவசாயி"
+
+msgid "Active Season"
+msgstr "செயலில் உள்ள பருவம்"
+
+msgid "Verify & Issue Fertilizer (Atomic)"
+msgstr "சரிபார்த்து உரத்தை வழங்குக"
+
+msgid "Scan Farmer QR & Issue Fertilizer"
+msgstr "விவசாயி QR ஸ்கேன் செய்து உரம் வழங்கல்"
+
+msgid "Distribution Successful!"
+msgstr "உர விநியோகம் வெற்றிகரமாக முடிந்தது!"
+
+msgid "Receipt"
+msgstr "பற்றுச்சீட்டு"
+
+msgid "Issued Quantity"
+msgstr "வழங்கப்பட்ட அளவு"
+
+msgid "View Digital Receipt"
+msgstr "டிஜிட்டல் பற்றுச்சீட்டைப் பார்க்கவும்"
+
+msgid "English"
+msgstr "English"
+
+msgid "Sinhala"
+msgstr "සිංහල"
+
+msgid "Tamil"
+msgstr "தமிழ்"
+
+msgid "Enter username or NIC"
+msgstr "பயனர்பெயர் அல்லது தேசிய அடையாள அட்டை எண்ணை உள்ளிடவும்"
+
+msgid "Activate Farmer Account"
+msgstr "விவசாயி கணக்கைச் செயல்படுத்துக"
+
+msgid "Forgot Password?"
+msgstr "கடவுச்சொல் மறந்துவிட்டதா?"
+
+msgid "Username or password is incorrect. Please try again."
+msgstr "பயனர்பெயர் அல்லது கடவுச்சொல் தவறானது. மீண்டும் முயற்சிக்கவும்."
+
+msgid "ASC Counter"
+msgstr "விவசாய சேவை மைய கருமபீடம்"
+
+msgid "Officer"
+msgstr "அதிகாரி"
+
+msgid "No Active Season"
+msgstr "செயலில் உள்ள பருவம் எதுவும் இல்லை"
+
+msgid "Stock deducted and quota updated atomically."
+msgstr "கையிருப்பு கழிக்கப்பட்டு உரிமை அளவு வெற்றிகரமாக புதுப்பிக்கப்பட்டது."
+
+msgid "Issued"
+msgstr "வழங்கப்பட்டது"
+
+msgid "Receipt Number"
+msgstr "பற்றுச்சீட்டு எண்"
+
+msgid "Farmer Name"
+msgstr "விவசாயியின் பெயர்"
+
+msgid "Batch Dispatched"
+msgstr "அனுப்பப்பட்ட தொகுதி"
+
+msgid "Bag"
+msgstr "பை"
+
+msgid "Scan Next Farmer"
+msgstr "அடுத்த விவசாயியை ஸ்கேன் செய்யவும்"
+
+msgid "Live Camera Scanner"
+msgstr "நேரலை கேமரா ஸ்கேனர்"
+
+msgid "Manual Code Entry"
+msgstr "கைமுறை குறியீடு உள்ளீடு"
+
+msgid "Active"
+msgstr "செயலில்"
+
+msgid "No active season available"
+msgstr "செயலில் உள்ள பருவம் எதுவும் இல்லை"
+
+msgid "Camera starting..."
+msgstr "கேமரா தொடங்குகிறது..."
+
+msgid "Camera"
+msgstr "கேமரா"
+
+msgid "Default (Rear Camera)"
+msgstr "இயல்புநிலை (பின் கேமரா)"
+
+msgid "Camera Access Unavailable"
+msgstr "கேமரா அணுகல் கிடைக்கவில்லை"
+
+msgid "Please allow camera access in your browser settings, or use Manual Code Entry below."
+msgstr "தயவுசெய்து உங்கள் உலாவியில் கேமரா அனுமதியை வழங்கவும், அல்லது கீழே கைமுறை குறியீட்டை உள்ளிடவும்."
+
+msgid "Retry Camera"
+msgstr "மீண்டும் முயற்சிக்கவும்"
+
+msgid "Switch to Manual Entry"
+msgstr "கைமுறை உள்ளீட்டிற்கு மாறவும்"
+
+msgid "Hold the camera steady in front of the farmer's smartphone screen or printed token. The scanner will automatically detect the QR and trigger verification."
+msgstr "விவசாயியின் தொலைபேசி திரைக்கு முன்னால் கேமராவை நிலையாகப் பிடிக்கவும். ஸ்கேனர் தானாகவே QR ஐ அடையாளம் காணும்."
+
+msgid "Enter 64-character QR Token String or SMS Code"
+msgstr "64 எழுத்துக்கள் கொண்ட QR டோக்கன் அல்லது SMS குறியீட்டை உள்ளிடவும்"
+
+msgid "Paste raw token string here (e.g. 5d9f3a...)"
+msgstr "டோக்கனை இங்கே ஒட்டவும்..."
+
+msgid "Use this fallback when the device camera is broken, unavailable, or when scanning under poor lighting."
+msgstr "கேமரா வேலை செய்யாத போது அல்லது வெளிச்சம் குறைவாக இருக்கும் போது இதைப் பயன்படுத்தவும்."
+
+msgid "QR Code Detected & Ready"
+msgstr "QR குறியீடு வெற்றிகரமாக கண்டறியப்பட்டது"
+
+msgid "Security & Traceability Note"
+msgstr "பாதுகாப்பு & கண்காணிப்பு குறிப்பு"
+
+msgid "QR tokens are dynamic and expire after 60 seconds."
+msgstr "QR டோக்கன்கள் 60 வினாடிகளில் காலாவதியாகிவிடும்."
+
+msgid "The token contains no personal data (NIC, name, land size). Only an opaque random hash is exchanged."
+msgstr "QR குறியீட்டில் தனிப்பட்ட தரவு (அடையாள அட்டை எண், பெயர்) எதுவும் இல்லை."
+
+msgid "Stock deduction occurs atomically using row-level database locks (PostgreSQL select_for_update)."
+msgstr "கையிருப்பு குறைப்பு தரவுத்தளத்தில் பாதுகாப்பாக (Row-level lock) ஒரே நேரத்தில் நிகழ்கிறது."
+
+msgid "For testing on local phones, access over HTTPS (Cloudflare Tunnel or localhost)."
+msgstr "மொபைல் போன்களில் சோதிக்க HTTPS இணைப்பைப் பயன்படுத்தவும்."
+
+msgid "Accessing camera..."
+msgstr "கேமராவை அணுகுகிறது..."
+
+msgid "Camera active - Aim at Farmer's QR"
+msgstr "கேமரா தயார் - விவசாயியின் QR மீது காட்டவும்"
+
+msgid "Camera unavailable"
+msgstr "கேமரா கிடைக்கவில்லை"
+
+msgid "Camera access was denied or requires HTTPS connection."
+msgstr "கேமரா அனுமதி மறுக்கப்பட்டது அல்லது HTTPS இணைப்பு தேவை."
+
+msgid "Scanner stopped."
+msgstr "ஸ்கேனர் நிறுத்தப்பட்டது."
+
+msgid "Warehouse Stock Dispatch"
+msgstr "கிடங்கு சரக்கு அனுப்புதல்"
+
+msgid "From"
+msgstr "இருந்து"
+
+msgid "To"
+msgstr "வரை"
+
+msgid "Dispatched at"
+msgstr "அனுப்பப்பட்ட நேரம்"
+
+msgid "Status"
+msgstr "நிலை"
+
+msgid "Manifest QR Code"
+msgstr "சரக்கு பட்டியல் QR குறியீடு"
+
+msgid "Recorded Discrepancy on this Dispatch"
+msgstr "இந்த அனுப்புகையில் பதிவான முரண்பாடுகள்"
+
+msgid "Logged by"
+msgstr "பதிவு செய்தவர்"
+
+msgid "Damaged Bags"
+msgstr "சேதமடைந்த பைகள்"
+
+msgid "Missing Bags"
+msgstr "காணாமல் போன பைகள்"
+
+msgid "Reconciliation & Usable Stock Verification"
+msgstr "சரக்கு சரிபார்த்தல் மற்றும் பயன்படுத்தக்கூடிய கையிருப்பு உறுதிப்படுத்தல்"
+
+msgid "Read-Only (Receiving Completed)"
+msgstr "வாசிப்பு மட்டும் (பெறுதல் முடிந்தது)"
+
+msgid "Batch & Product"
+msgstr "தொகுதி & தயாரிப்பு"
+
+msgid "Dispatched"
+msgstr "அனுப்பப்பட்டது"
+
+msgid "Good Condition"
+msgstr "நல்ல நிலை"
+
+msgid "Damaged"
+msgstr "சேதமடைந்தது"
+
+msgid "Missing (Auto)"
+msgstr "காணவில்லை (தானியங்கி)"
+
+msgid "Discrepancy Incident Reason (Mandatory)"
+msgstr "முரண்பாட்டுக்கான காரணம் (கட்டாயமானது)"
+
+msgid "Explain why bags were damaged or missing in transit (e.g. rain damage during lorry transport, count shortage)..."
+msgstr "போக்குவரத்தில் பைகள் சேதமடைந்த அல்லது காணாமல் போன காரணத்தை விளக்குக..."
+
+msgid "This note will be permanently logged in the audit ledger and flagged for Auditor inspection."
+msgstr "இந்தக் குறிப்பு தணிக்கைப் பதிவேட்டில் நிரந்தரமாகப் பதிவு செய்யப்பட்டு தணிக்கையாளரின் ஆய்வுக்கு உட்படுத்தப்படும்."
+
+msgid "Usable bags to add to ASC Stock"
+msgstr "ASC கையிருப்பில் சேர்க்கப்படும் நல்ல பைகள்"
+
+msgid "Total Discrepancies"
+msgstr "மொத்த முரண்பாடுகள்"
+
+msgid "Confirm Receipt & Update ASC Usable Stock (Atomic)"
+msgstr "பெறுதலை உறுதிசெய்து கையிருப்பை புதுப்பிக்கவும்"
+
+msgid "Auditor & Supply Chain Oversight"
+msgstr "தணிக்கையாளர் & விநியோகச் சங்கிலி மேற்பார்வை"
+
+msgid "Discrepancy & Damaged Stock Report"
+msgstr "முரண்பாடுகள் மற்றும் சேதமடைந்த சரக்கு அறிக்கை"
+
+msgid "Official log of damaged or missing fertilizer bags recorded during ASC receiving."
+msgstr "விவசாய சேவை மையத்தில் பெறப்பட்ட போது சேதமடைந்த அல்லது காணாமல் போன உரைப் பைகள் பற்றிய அதிகாரப்பூர்வ பதிவு."
+
+msgid "Total Damaged"
+msgstr "மொத்த சேதம்"
+
+msgid "Total Missing"
+msgstr "மொத்த இழப்பு"
+
+msgid "Bags"
+msgstr "பைகள்"
+
+msgid "Filter by ASC"
+msgstr "மையத்தின் அடிப்படையில் வடிகட்டுக"
+
+msgid "All ASC Centres"
+msgstr "அனைத்து மையங்களும்"
+
+msgid "From Date"
+msgstr "தொடக்கத் திகதி"
+
+msgid "To Date"
+msgstr "முடிவுத் திகதி"
+
+msgid "Filter"
+msgstr "வடிகட்டு"
+
+msgid "Reset"
+msgstr "மீட்டமை"
+
+msgid "Dispatch Ref"
+msgstr "அனுப்புகை எண்"
+
+msgid "Route"
+msgstr "பாதை"
+
+msgid "Incident Reason / Notes"
+msgstr "காரணம் / குறிப்புகள்"
+
+msgid "Recorded By"
+msgstr "பதிவு செய்தவர்"
+
+msgid "Timestamp"
+msgstr "திகதி மற்றும் நேரம்"
+
+msgid "Manifest"
+msgstr "பட்டியல்"
+
+msgid "View"
+msgstr "பார்"
+
+msgid "No discrepancy incidents recorded for this criteria."
+msgstr "எந்தவொரு முரண்பாட்டு சம்பவங்களும் பதிவாகவில்லை."
+
+msgid "Step 2: Confirm Farmer & Issue Details"
+msgstr "படி 2: விவசாயி விபரங்கள் மற்றும் உரம் வழங்கலை உறுதிப்படுத்துக"
+
+msgid "Verification Passed"
+msgstr "சரிபார்ப்பு வெற்றிகரமாக முடிந்தது"
+
+msgid "Masked NIC"
+msgstr "தேசிய அடையாள அட்டை எண்"
+
+msgid "Fertilizer Product"
+msgstr "உர வகை"
+
+msgid "Remaining Quota"
+msgstr "மீதமுள்ள ஒதுக்கீடு"
+
+msgid "ASC Stock on Hand (FEFO Priority)"
+msgstr "மையத்தின் கையிருப்பு (FEFO முன்னுரிமை)"
+
+msgid "Available in this batch"
+msgstr "இந்த தொகுதியில் கிடைக்கும் அளவு"
+
+msgid "Confirm Issue Quantity (kg)"
+msgstr "வழங்கப்படும் அளவை உறுதிப்படுத்துக (kg)"
+
+msgid "Maximum deliverable from available stock and quota"
+msgstr "கிடைக்கும் கையிருப்பு மற்றும் ஒதுக்கீட்டின் அடிப்படையில் வழங்கக்கூடிய அதிகபட்ச அளவு"
+
+msgid "Confirm & Issue Fertilizer"
+msgstr "உறுதிசெய்து உரத்தை வழங்குக"
+
+msgid "Cancel"
+msgstr "ரத்து செய்க"
+
+msgid "Note: The QR token remains unredeemed and valid until you press Confirm."
+msgstr "குறிப்பு: நீங்கள் உறுதிப்படுத்தும் வரை QR குறியீடு செல்லுபடியாகும்."
+
+msgid "Manual 6-Digit Code Entry"
+msgstr "6 இலக்க கைமுறை குறியீடு உள்ளீடு"
+
+msgid "Enter 6-Digit Farmer Backup Code"
+msgstr "விவசாயியின் 6 இலக்க கூடுதல் குறியீட்டை உள்ளிடவும்"
+
+msgid "Ask the farmer for the 6-digit backup code displayed under their QR code."
+msgstr "விவசாயியின் QR குறியீட்டின் கீழ் காட்டப்பட்டுள்ள 6 இலக்க குறியீட்டைக் கேட்கவும்."
+
+msgid "Code Detected & Ready for Verification"
+msgstr "குறியீடு அடையாளம் காணப்பட்டது - சரிபார்ப்புக்குத் தயார்"
+
+msgid "Verify Farmer Code"
+msgstr "விவசாயி குறியீட்டைச் சரிபார்க்கவும்"
+
+msgid "Backup 6-Digit Code"
+msgstr "கூடுதல் 6 இலக்க குறியீடு"
+
+msgid "Officer can type this code if camera fails"
+msgstr "கேமரா இயங்காத போது அதிகாரி இந்தக் குறியீட்டைப் பயன்படுத்தலாம்"
+
+msgid "Present this QR code to the ASC Officer"
+msgstr "இந்த QR குறியீட்டை விவசாய சேவை மைய அதிகாரியிடம் காட்டவும்"
+
+msgid "Generate a single-use secure QR code before presenting at the counter. The code expires in 60 seconds."
+msgstr "கருமபீடத்தில் சமர்ப்பிப்பதற்கு முன் பாதுகாப்பான QR குறியீட்டைப் பெறவும். குறியீடு 60 வினாடிகளில் காலாவதியாகும்."
+
+msgid "Welcome"
+msgstr "வணக்கம்"
+
+msgid "NIC"
+msgstr "அடையாள அட்டை"
+
+msgid "Mobile"
+msgstr "கைபேசி எண்"
+
+msgid "Approved Quota"
+msgstr "அனுமதிக்கப்பட்ட ஒதுக்கீடு"
+
+msgid "Toggle Size"
+msgstr "எழுத்து அளவை மாற்று"
+
+msgid "No fertilizer quotas recorded for this account."
+msgstr "இந்தக் கணக்கில் உர ஒதுக்கீடு எதுவும் பதிவு செய்யப்படவில்லை."
+
+msgid "SIMULATED SMS RECEIPT"
+msgstr "போலி SMS பற்றுச்சீட்டு"
+
+msgid "My Fertilizer Issue History & Digital Receipts"
+msgstr "எனது உரம் பெற்ற வரலாறு மற்றும் டிஜிட்டல் ரசீதுகள்"
+
+msgid "Receipt No"
+msgstr "பற்றுச்சீட்டு எண்"
+
+msgid "Quantity"
+msgstr "அளவு"
+
+msgid "Date"
+msgstr "திகதி"
+
+msgid "Action"
+msgstr "செயல்"
+
+msgid "View Receipt"
+msgstr "ரசீதைப் பார்"
+
+msgid "No fertilizer distributions recorded yet."
+msgstr "இதுவரை உரம் வழங்கப்படவில்லை."

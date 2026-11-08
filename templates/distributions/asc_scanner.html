@@ -1,60 +1,535 @@
-{% extends 'base.html' %} {% block content %}
-<div
-  class="max-w-xl mx-auto bg-white p-6 rounded-lg shadow-sm border border-slate-200"
->
-  <h1 class="text-xl font-bold text-slate-800 mb-4">
-    ASC Officer: Scan Farmer QR & Issue Fertilizer
-  </h1>
+{% extends 'base.html' %}
+{% load i18n static %}
 
-  <form method="post" class="space-y-4">
-    {% csrf_token %}
-    <div>
-      <label class="block text-sm font-medium mb-1">Active Season</label>
-      <select name="season" required class="w-full border rounded px-3 py-2">
-        {% for s in seasons %}
-        <option value="{{ s.id }}">{{ s.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="block text-sm font-medium mb-1"
-        >Scanned QR Token String</label
-      >
-      <textarea
-        name="token_string"
-        rows="3"
-        required
-        placeholder="Paste or scan raw token string here..."
-        class="w-full border rounded px-3 py-2 font-mono text-sm"
-      ></textarea>
-    </div>
-    <button
-      type="submit"
-      class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded"
-    >
-      Verify & Issue Fertilizer (Atomic)
-    </button>
-  </form>
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
 
-  {% if distribution %}
-  <div class="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded">
-    <h3 class="font-bold text-emerald-800 mb-1">Distribution Successful!</h3>
-    <p class="text-sm text-slate-700">
-      Receipt: <strong>{{ distribution.receipt_number }}</strong>
-    </p>
-    <p class="text-sm text-slate-700">
-      Farmer: {{ distribution.farmer.full_name }}
-    </p>
-    <p class="text-sm text-slate-700">
-      Issued Quantity: {{ distribution.quantity_kg }} kg
-    </p>
-    <a
-      href="{% url 'distribution_receipt' distribution.receipt_number %}"
-      target="_blank"
-      class="mt-3 inline-block bg-emerald-700 text-white text-xs px-3 py-1.5 rounded hover:bg-emerald-800"
-      >View Digital Receipt →</a
-    >
+  <!-- Header Banner -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">📷</span>
+        <h1 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+          {% trans "Scan Farmer QR & Issue Fertilizer" %}
+        </h1>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-500 mt-1">
+        {% trans "ASC Counter" %} &bull; 
+        <strong>{{ user.asc_centre.name|default:"Vavuniya South ASC" }}</strong> &bull; 
+        {% trans "Officer" %}: <strong>{{ user.username }}</strong>
+      </p>
+    </div>
+
+    <!-- Active Season Indicator -->
+    <div class="bg-emerald-50 border border-emerald-300 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-900 flex items-center gap-1.5 shadow-sm">
+      <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+      <span>{% trans "Active Season" %}:</span>
+      {% for s in seasons %}
+      <span class="font-bold underline">{{ s.name }}</span>
+      {% empty %}
+      <span class="text-rose-600 font-bold">{% trans "No Active Season" %}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- STEP 3: CONFIRMATION SCREEN (Shown after scan/code verification, BEFORE token is redeemed) -->
+  {% if verification %}
+  <div class="bg-white rounded-2xl shadow-md border-2 border-amber-500 overflow-hidden">
+    <div class="bg-amber-500 text-slate-900 p-4 font-black text-lg flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">📋</span>
+        <span>{% trans "Step 2: Confirm Farmer & Issue Details" %}</span>
+      </div>
+      <span class="bg-slate-900 text-amber-300 text-xs px-3 py-1 rounded-full font-bold">
+        {% trans "Verification Passed" %}
+      </span>
+    </div>
+
+    <form method="post" class="p-6 space-y-5">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="confirm" />
+      <input type="hidden" name="token_string" value="{{ verification.token_string }}" />
+      <input type="hidden" name="season" value="{{ verification.season.id }}" />
+
+      <!-- Farmer Profile Box -->
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div>
+          <span class="text-xs text-slate-500 block font-bold">{% trans "Farmer Name" %}</span>
+          <span class="font-bold text-base text-slate-900">{{ verification.farmer.full_name }}</span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block font-bold">{% trans "Masked NIC" %}</span>
+          <span class="font-mono font-bold text-base text-slate-900">{{ verification.farmer.masked_nic }}</span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block font-bold">{% trans "Fertilizer Product" %}</span>
+          <span class="font-bold text-slate-800">{{ verification.entitlement.product.name }}</span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block font-bold">{% trans "Remaining Quota" %}</span>
+          <span class="font-mono font-extrabold text-emerald-700 text-base">{{ verification.entitlement.remaining_kg }} kg</span>
+        </div>
+      </div>
+
+      <!-- Available Stock Box -->
+      <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 text-sm space-y-1">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">
+            📦 {% trans "ASC Stock on Hand (FEFO Priority)" %}
+          </span>
+          <span class="bg-emerald-200 text-emerald-900 text-xs font-bold px-2 py-0.5 rounded">
+            Batch: {{ verification.batch.batch_number }}
+          </span>
+        </div>
+        <p class="text-slate-700">
+          {% trans "Available in this batch" %}: <strong>{{ verification.asc_stock.bags_on_hand }} {% trans "Bags" %}</strong>
+          (Exp: {{ verification.batch.expiry_date }})
+        </p>
+      </div>
+
+      <!-- Quantity Selection -->
+      <div>
+        <label class="block text-sm font-bold text-slate-800 mb-1">
+          {% trans "Confirm Issue Quantity (kg)" %}
+        </label>
+        <div class="flex items-center gap-3">
+          <input
+            type="number"
+            step="1"
+            min="1"
+            max="{{ verification.max_deliverable_kg }}"
+            name="quantity_kg"
+            value="{{ verification.default_issue_kg }}"
+            required
+            class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 text-lg font-bold text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+          />
+          <span class="font-bold text-slate-600 whitespace-nowrap">kg (1 {% trans "Bag" %} = {{ verification.bag_weight }} kg)</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">
+          {% trans "Maximum deliverable from available stock and quota" %}: {{ verification.max_deliverable_kg }} kg.
+        </p>
+      </div>
+
+      <!-- Confirm and Cancel Buttons (Large touch targets) -->
+      <div class="pt-2 flex flex-col sm:flex-row gap-3">
+        <button
+          type="submit"
+          class="touch-target flex-1 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black text-lg py-4 px-6 rounded-xl shadow-md transition duration-150 transform active:scale-[0.99] flex items-center justify-center gap-2"
+        >
+          <span>⚡</span>
+          <span>{% trans "Confirm & Issue Fertilizer" %}</span>
+        </button>
+
+        <a
+          href="{% url 'asc_scanner' %}"
+          class="touch-target bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-6 py-4 rounded-xl text-center transition flex items-center justify-center gap-1.5"
+        >
+          <span>❌</span>
+          <span>{% trans "Cancel" %}</span>
+        </a>
+      </div>
+      <p class="text-xs text-center text-slate-500">
+        {% trans "Note: The QR token remains unredeemed and valid until you press Confirm." %}
+      </p>
+    </form>
   </div>
   {% endif %}
+
+  <!-- Success Result Card (Displays immediately after distribution) -->
+  {% if distribution %}
+  <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-6 rounded-2xl shadow-lg border border-emerald-500 space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl bg-white/20 p-2 rounded-xl">✅</span>
+        <div>
+          <h2 class="text-xl font-black tracking-wide">{% trans "Distribution Successful!" %}</h2>
+          <p class="text-xs text-emerald-100">{% trans "Stock deducted and quota updated atomically." %}</p>
+        </div>
+      </div>
+      <span class="bg-white text-emerald-900 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+        {% trans "Issued" %}
+      </span>
+    </div>
+
+    <div class="bg-emerald-900/60 p-4 rounded-xl border border-emerald-500/40 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+      <div>
+        <span class="text-emerald-300 text-xs block">{% trans "Receipt Number" %}</span>
+        <span class="font-mono font-bold text-base select-all">{{ distribution.receipt_number }}</span>
+      </div>
+      <div>
+        <span class="text-emerald-300 text-xs block">{% trans "Farmer Name" %}</span>
+        <span class="font-bold text-base">{{ distribution.farmer.full_name }}</span>
+        <span class="text-xs text-emerald-200 block font-mono">NIC: {{ distribution.farmer.masked_nic }}</span>
+      </div>
+      <div>
+        <span class="text-emerald-300 text-xs block">{% trans "Issued Quantity" %}</span>
+        <span class="font-bold text-base text-amber-300">{{ distribution.quantity_kg }} kg (1 {% trans "Bag" %})</span>
+      </div>
+      <div>
+        <span class="text-emerald-300 text-xs block">{% trans "Batch Dispatched" %}</span>
+        <span class="font-mono text-xs">{{ distribution.batch.batch_number }}</span>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-2 pt-2">
+      <a
+        href="{% url 'distribution_receipt' distribution.receipt_number %}"
+        target="_blank"
+        class="touch-target flex-1 bg-white hover:bg-emerald-50 text-emerald-900 font-bold px-4 py-3 rounded-xl text-center shadow flex items-center justify-center gap-2 transition"
+      >
+        <span>🖨️</span>
+        <span>{% trans "View Digital Receipt" %} &rarr;</span>
+      </a>
+      <a
+        href="{% url 'asc_scanner' %}"
+        class="touch-target bg-emerald-950/70 hover:bg-emerald-950 text-emerald-100 font-semibold px-4 py-3 rounded-xl text-center border border-emerald-500/50 flex items-center justify-center gap-2 transition"
+      >
+        <span>🔄</span>
+        <span>{% trans "Scan Next Farmer" %}</span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Scanner & Manual Entry Main Card (Hidden when confirmation box is active) -->
+  {% if not verification %}
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    
+    <!-- Mode Switcher Tabs (Large touch targets) -->
+    <div class="flex border-b border-slate-200 bg-slate-50">
+      <button
+        type="button"
+        id="tab-camera-btn"
+        onclick="switchScannerTab('camera')"
+        class="flex-1 py-3.5 px-4 text-center font-bold text-sm sm:text-base border-b-2 border-emerald-600 bg-white text-emerald-800 flex items-center justify-center gap-2 transition touch-target"
+      >
+        <span>📷</span>
+        <span>{% trans "Live Camera Scanner" %}</span>
+      </button>
+      <button
+        type="button"
+        id="tab-manual-btn"
+        onclick="switchScannerTab('manual')"
+        class="flex-1 py-3.5 px-4 text-center font-bold text-sm sm:text-base border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2 transition touch-target"
+      >
+        <span>⌨️</span>
+        <span>{% trans "Manual 6-Digit Code Entry" %}</span>
+      </button>
+    </div>
+
+    <div class="p-5 sm:p-6 space-y-5">
+
+      <!-- Season Selection Form Input -->
+      <div>
+        <label class="block text-sm font-bold text-slate-800 mb-1.5">
+          {% trans "Active Season" %}
+        </label>
+        <select
+          id="season-selector"
+          name="season"
+          form="verify-fertilizer-form"
+          required
+          class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 text-base focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+        >
+          {% for s in seasons %}
+          <option value="{{ s.id }}">{{ s.name }} ({% trans "Active" %})</option>
+          {% empty %}
+          <option value="" disabled>{% trans "No active season available" %}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- TAB 1: LIVE CAMERA SCANNER -->
+      <div id="camera-section" class="space-y-4">
+        
+        <!-- Camera Controls & Dropdown -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
+          <div class="flex items-center gap-2 text-slate-600 font-medium">
+            <span id="scanner-status-indicator" class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="scanner-status-text">{% trans "Camera starting..." %}</span>
+          </div>
+
+          <!-- Camera Selection Dropdown -->
+          <div class="flex items-center gap-1.5 w-full sm:w-auto">
+            <label for="camera-select" class="text-slate-500 whitespace-nowrap">{% trans "Camera" %}:</label>
+            <select
+              id="camera-select"
+              class="border rounded-lg px-2 py-1.5 text-xs text-slate-700 bg-slate-50 focus:outline-emerald-600 max-w-[200px] truncate"
+            >
+              <option value="">{% trans "Default (Rear Camera)" %}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Camera Viewfinder Container -->
+        <div class="relative bg-black rounded-2xl overflow-hidden shadow-inner border-2 border-emerald-600 min-h-[300px] sm:min-h-[350px] flex items-center justify-center">
+          
+          <!-- html5-qrcode reader element -->
+          <div id="reader" class="w-full"></div>
+
+          <!-- Permission / Error Overlay -->
+          <div
+            id="camera-error-box"
+            class="hidden absolute inset-0 bg-slate-900/95 text-white p-6 flex flex-col items-center justify-center text-center space-y-3 z-10"
+          >
+            <span class="text-4xl">📷⚠️</span>
+            <h3 class="text-lg font-bold text-rose-300" id="camera-error-title">
+              {% trans "Camera Access Unavailable" %}
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-300 max-w-sm" id="camera-error-message">
+              {% trans "Please allow camera access in your browser settings, or use Manual Code Entry below." %}
+            </p>
+            <div class="flex flex-col sm:flex-row gap-2 pt-2">
+              <button
+                type="button"
+                onclick="initCameraScanner()"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition"
+              >
+                🔄 {% trans "Retry Camera" %}
+              </button>
+              <button
+                type="button"
+                onclick="switchScannerTab('manual')"
+                class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition"
+              >
+                ⌨️ {% trans "Switch to Manual Entry" %}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scanner Guidance Note -->
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 flex items-start gap-2">
+          <span class="text-base">💡</span>
+          <span>
+            {% trans "Hold the camera steady in front of the farmer's smartphone screen or printed token. The scanner will verify the farmer and present the confirmation screen." %}
+          </span>
+        </div>
+      </div>
+
+      <!-- TAB 2: MANUAL 6-DIGIT CODE ENTRY (Fallback mode) -->
+      <div id="manual-section" class="hidden space-y-4">
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1">
+            {% trans "Enter 6-Digit Farmer Backup Code" %}
+          </label>
+          <input
+            type="text"
+            id="manual-token-input"
+            maxlength="10"
+            placeholder="e.g. 839 201"
+            class="w-full border-2 border-slate-300 rounded-xl p-4 font-mono text-2xl font-black tracking-widest text-center text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+          />
+          <p class="text-xs text-slate-500 mt-2 text-center">
+            {% trans "Ask the farmer for the 6-digit backup code displayed under their QR code." %}
+          </p>
+        </div>
+      </div>
+
+      <!-- Verification Submission Form (Triggers Step 1 verification) -->
+      <form id="verify-fertilizer-form" method="post" class="space-y-4 pt-2 border-t border-slate-100">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="verify" />
+        <input type="hidden" name="season" id="hidden-season-input" value="{{ seasons.0.id }}" />
+        <input type="hidden" name="token_string" id="scanned-token-input" required />
+
+        <!-- Scanned Detected Preview Badge -->
+        <div id="scanned-preview-box" class="hidden bg-emerald-50 border-2 border-emerald-500 p-4 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+              <span>🎯</span> {% trans "Code Detected & Ready for Verification" %}
+            </span>
+          </div>
+          <div class="bg-white p-2.5 rounded-lg border border-emerald-200 font-mono text-xs text-slate-700 break-all" id="scanned-token-display">
+            <!-- Code preview inserted here -->
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          id="submit-verify-btn"
+          class="w-full touch-target bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-extrabold text-lg py-4 px-6 rounded-xl shadow-md transition duration-150 transform active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <span>🔍</span>
+          <span>{% trans "Verify Farmer Code" %}</span>
+        </button>
+      </form>
+
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+
+<!-- Include Local Offline html5-qrcode Library (Runs without internet) -->
+<script src="{% static 'vendor/html5-qrcode.min.js' %}"></script>
+
+<script>
+  let html5QrCode = null;
+  let isScanning = false;
+
+  // Sync Season Dropdown with Hidden Input
+  const seasonSelector = document.getElementById("season-selector");
+  const hiddenSeasonInput = document.getElementById("hidden-season-input");
+  if (seasonSelector && hiddenSeasonInput) {
+    seasonSelector.addEventListener("change", function () {
+      hiddenSeasonInput.value = this.value;
+    });
+  }
+
+  // Switch between Camera and Manual Tabs
+  function switchScannerTab(tabName) {
+    const cameraBtn = document.getElementById("tab-camera-btn");
+    const manualBtn = document.getElementById("tab-manual-btn");
+    const cameraSection = document.getElementById("camera-section");
+    const manualSection = document.getElementById("manual-section");
+
+    if (!cameraBtn || !manualBtn) return;
+
+    if (tabName === "camera") {
+      cameraBtn.className = "flex-1 py-3.5 px-4 text-center font-bold text-sm sm:text-base border-b-2 border-emerald-600 bg-white text-emerald-800 flex items-center justify-center gap-2 transition touch-target";
+      manualBtn.className = "flex-1 py-3.5 px-4 text-center font-bold text-sm sm:text-base border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2 transition touch-target";
+      cameraSection.classList.remove("hidden");
+      manualSection.classList.add("hidden");
+      if (!isScanning) {
+        initCameraScanner();
+      }
+    } else {
+      manualBtn.className = "flex-1 py-3.5 px-4 text-center font-bold text-sm sm:text-base border-b-2 border-emerald-600 bg-white text-emerald-800 flex items-center justify-center gap-2 transition touch-target";
+      cameraBtn.className = "flex-1 py-3.5 px-4 text-center font-bold text-sm sm:text-base border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2 transition touch-target";
+      manualSection.classList.remove("hidden");
+      cameraSection.classList.add("hidden");
+      stopCameraScanner();
+    }
+  }
+
+  // Audio Beep Feedback using Web Audio API
+  function playSuccessBeep() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.2);
+    } catch (e) {}
+  }
+
+  // Handle Successful QR Scan -> Triggers VERIFY (Does NOT redeem token)
+  function onScanSuccess(decodedText, decodedResult) {
+    playSuccessBeep();
+
+    const cleanToken = decodedText.trim();
+    document.getElementById("scanned-token-input").value = cleanToken;
+    document.getElementById("scanned-token-display").textContent = cleanToken;
+    document.getElementById("scanned-preview-box").classList.remove("hidden");
+
+    const statusText = document.getElementById("scanner-status-text");
+    if (statusText) {
+      statusText.textContent = "✅ QR Code Detected! Verifying...";
+    }
+
+    stopCameraScanner();
+
+    // Auto-submit verification form to show confirmation screen
+    setTimeout(function () {
+      document.getElementById("verify-fertilizer-form").submit();
+    }, 400);
+  }
+
+  function onScanFailure(error) {}
+
+  // Initialize and Start Camera
+  async function initCameraScanner() {
+    const errorBox = document.getElementById("camera-error-box");
+    const statusText = document.getElementById("scanner-status-text");
+    const cameraSelect = document.getElementById("camera-select");
+
+    if (!errorBox || !statusText) return;
+
+    errorBox.classList.add("hidden");
+    statusText.textContent = "{% trans "Accessing camera..." %}";
+
+    try {
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        cameraSelect.innerHTML = "";
+        devices.forEach((device, index) => {
+          const option = document.createElement("option");
+          option.value = device.id;
+          option.textContent = device.label || `Camera ${index + 1}`;
+          cameraSelect.appendChild(option);
+        });
+
+        const selectedId = cameraSelect.value || devices[0].id;
+
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        };
+
+        const cameraConfig = devices.length === 1 
+          ? { deviceId: { exact: selectedId } } 
+          : { facingMode: "environment" };
+
+        await html5QrCode.start(
+          cameraConfig,
+          config,
+          onScanSuccess,
+          onScanFailure
+        );
+
+        isScanning = true;
+        statusText.textContent = "{% trans "Camera active - Aim at Farmer's QR" %}";
+      } else {
+        throw new Error("No camera devices detected.");
+      }
+    } catch (err) {
+      statusText.textContent = "{% trans "Camera unavailable" %}";
+      errorBox.classList.remove("hidden");
+    }
+  }
+
+  function stopCameraScanner() {
+    if (html5QrCode && isScanning) {
+      html5QrCode.stop().then(() => {
+        isScanning = false;
+      }).catch(err => {});
+    }
+  }
+
+  // Manual 6-digit input synchronization
+  const manualInput = document.getElementById("manual-token-input");
+  if (manualInput) {
+    manualInput.addEventListener("input", function () {
+      const val = this.value.trim().replace(" ", "");
+      document.getElementById("scanned-token-input").value = val;
+      if (val.length > 0) {
+        document.getElementById("scanned-token-display").textContent = val;
+        document.getElementById("scanned-preview-box").classList.remove("hidden");
+      } else {
+        document.getElementById("scanned-preview-box").classList.add("hidden");
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    {% if not verification and not distribution %}
+    initCameraScanner();
+    {% endif %}
+  });
+</script>
 {% endblock %}

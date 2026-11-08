@@ -1,135 +1,102 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+{% load i18n static %}
+
+{% block content %}
 <div id="farmer-app" class="max-w-4xl mx-auto space-y-6 text-base">
-  <!-- Language Switcher (Sinhala / Tamil / English) & Font Size Accessibility Toggle -->
-  <div
-    class="bg-emerald-900 text-white p-4 rounded-xl shadow flex flex-wrap justify-between items-center gap-3"
-  >
-    <div class="flex items-center gap-2">
-      <span
-        class="text-sm font-semibold uppercase tracking-wider text-emerald-200"
-        >🌐 Language / භාෂාව / மொழி:</span
-      >
-      <button
-        type="button"
-        onclick="setLang('si')"
-        id="btn-si"
-        class="px-3 py-1.5 rounded-lg font-bold text-sm bg-white text-emerald-900 shadow"
-      >
-        සිංහල
-      </button>
-      <button
-        type="button"
-        onclick="setLang('ta')"
-        id="btn-ta"
-        class="px-3 py-1.5 rounded-lg font-bold text-sm bg-emerald-800 text-white hover:bg-emerald-700"
-      >
-        தமிழ்
-      </button>
-      <button
-        type="button"
-        onclick="setLang('en')"
-        id="btn-en"
-        class="px-3 py-1.5 rounded-lg font-bold text-sm bg-emerald-800 text-white hover:bg-emerald-700"
-      >
-        English
-      </button>
-    </div>
-    <div>
-      <button
-        type="button"
-        onclick="toggleLargeFont()"
-        class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-3 py-1.5 rounded-lg text-sm shadow"
-      >
-        🔍 A+ <span data-i18n="font_btn">විශාල අකුරු / பெரிய எழுத்து</span>
-      </button>
-    </div>
+
+  <!-- Accessibility Font Size Toggle Bar -->
+  <div class="flex justify-end items-center">
+    <button
+      type="button"
+      onclick="toggleLargeFont()"
+      class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-4 py-2 rounded-xl text-sm shadow transition flex items-center gap-1.5 touch-target"
+    >
+      <span>🔍 A+</span>
+      <span>{% trans "Toggle Size" %}</span>
+    </button>
   </div>
 
-  <!-- Farmer Welcome Header (with Masked NIC for Privacy) -->
-  <div
-    class="bg-white p-6 rounded-xl shadow-sm border-2 border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-  >
+  <!-- Farmer Welcome Header -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
     <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">
-        <span data-i18n="welcome">ආයුබෝවන්</span>, {{ farmer.full_name }}
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
+        {% trans "Welcome" %}, {{ farmer.full_name }}
       </h1>
-      <p class="text-base text-slate-600 mt-1 font-medium">
-        <span data-i18n="nic_label">හැඳුනුම්පත් අංකය (Privacy Masked)</span>:
-        <strong class="font-mono text-slate-800"
-          >{{ farmer.masked_nic }}</strong
-        >
-        | <span data-i18n="mobile_label">දුරකථන</span>:
-        <strong class="font-mono text-slate-800"
-          >{{ farmer.mobile_number }}</strong
-        >
+      <p class="text-sm md:text-base text-slate-600 mt-1">
+        <span>{% trans "NIC" %}:</span>
+        <strong class="font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{{ farmer.masked_nic }}</strong>
+        <span class="mx-2">&bull;</span>
+        <span>{% trans "Mobile" %}:</span>
+        <strong class="font-mono text-slate-900">{{ farmer.mobile_number }}</strong>
       </p>
     </div>
-    <span
-      class="bg-emerald-100 text-emerald-900 px-4 py-2 rounded-lg font-bold text-sm border border-emerald-300"
-    >
-      📍 {{ farmer.arpa_division|default:"Vavuniya ASC" }}
+    <span class="bg-emerald-100 text-emerald-900 px-3.5 py-1.5 rounded-xl font-bold text-sm border border-emerald-300 flex items-center gap-1">
+      📍 {{ farmer.arpa_division|default:"Vavuniya South ASC" }}
     </span>
   </div>
 
-  <!-- Dynamic 60-Second QR Generation & Visual QR Code -->
-  <div
-    class="bg-white p-6 rounded-xl shadow-sm border-2 border-emerald-600 text-center"
-  >
-    <h2
-      class="text-xl md:text-2xl font-extrabold mb-2 text-emerald-900"
-      data-i18n="qr_title"
-    >
-      තත්පර 60ක ආරක්ෂිත QR කේතය
-    </h2>
-    <p class="text-base text-slate-600 mb-5" data-i18n="qr_desc">
-      පොහොර ලබා ගැනීම සඳහා කවුන්ටරයේ නිලධාරියා ඉදිරියේදී පහත බොත්තම ඔබා QR කේතය
-      ලබා ගන්න.
-    </p>
+  <!-- Dynamic 60-Second Secure QR Code & 6-Digit Backup Code -->
+  <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border-2 border-emerald-600 text-center space-y-4">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-black text-emerald-900">
+        {% trans "Dynamic 60-Second Secure QR Code" %}
+      </h2>
+      <p class="text-sm text-slate-600 max-w-lg mx-auto mt-1">
+        {% trans "Generate a single-use secure QR code before presenting at the counter. The code expires in 60 seconds." %}
+      </p>
+    </div>
 
     <form method="post">
       {% csrf_token %}
       <button
         type="submit"
-        class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-lg px-8 py-4 rounded-xl shadow-lg transition transform active:scale-95"
+        class="touch-target bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-extrabold text-base px-8 py-3.5 rounded-xl shadow-md transition duration-150 inline-flex items-center gap-2"
       >
-        ⚡ <span data-i18n="qr_btn">අලුත් QR කේතයක් ලබා ගන්න</span>
+        <span>⚡</span>
+        <span>{% trans "Generate Fresh QR Code" %}</span>
       </button>
     </form>
 
     {% if raw_token %}
-    <div
-      class="mt-6 p-5 bg-slate-50 border-2 border-slate-300 rounded-xl inline-flex flex-col items-center"
-    >
-      <p class="text-sm font-bold text-slate-700 mb-2" data-i18n="scan_here">
-        නිලධාරියාට මෙම QR කේතය පෙන්වන්න:
+    <div class="mt-6 p-6 bg-slate-50 border-2 border-emerald-500 rounded-2xl inline-flex flex-col items-center max-w-full shadow-inner space-y-4">
+      <p class="text-sm font-bold text-emerald-900 flex items-center gap-1.5">
+        <span>📷</span> {% trans "Present this QR code to the ASC Officer" %}:
       </p>
-      <div
-        id="qrcode"
-        class="bg-white p-4 border-2 border-emerald-700 rounded-lg shadow mb-3"
-      ></div>
-      <p class="text-xs font-mono text-slate-500 mb-1">
-        Token Payload (For Demo Scanner):
-      </p>
-      <code
-        class="bg-black text-emerald-400 p-2 rounded text-xs block font-mono select-all max-w-md break-all"
-        >{{ raw_token }}</code
-      >
-      <p class="text-sm text-red-600 mt-3 font-bold" data-i18n="qr_warn">
-        ⚠️ තත්පර 60කින් කල් ඉකුත් වේ. Screenshot ගැනීමෙන් වළකින්න.
+      
+      <!-- Visual QR Code canvas container -->
+      <div id="qrcode" class="bg-white p-4 border-2 border-slate-200 rounded-2xl shadow"></div>
+
+      <!-- 6-Digit Backup OTP Code (Clean, Large, Readable for Officers) -->
+      <div class="bg-emerald-950 text-white p-4 rounded-xl w-full max-w-xs shadow text-center">
+        <span class="text-xs uppercase tracking-widest text-emerald-300 block font-bold mb-1">
+          {% trans "Backup 6-Digit Code" %}
+        </span>
+        <div class="text-3xl font-mono font-extrabold tracking-widest text-amber-300 select-all">
+          {{ raw_code|default:"------" }}
+        </div>
+        <span class="text-[11px] text-emerald-200 mt-1 block">
+          {% trans "Officer can type this code if camera fails" %}
+        </span>
+      </div>
+
+      <p class="text-xs sm:text-sm text-amber-700 font-semibold flex items-center gap-1">
+        <span>⚠️</span> {% trans "Expires in 60 seconds. Do not share screenshots." %}
       </p>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Local Offline QRCode JS (Runs without internet) -->
+    <script src="{% static 'vendor/qrcode.min.js' %}"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        var rawToken = "{{ raw_token }}";
+        const rawToken = "{{ raw_token }}";
         if (rawToken) {
-          document.getElementById("qrcode").innerHTML = "";
-          new QRCode(document.getElementById("qrcode"), {
+          const qrContainer = document.getElementById("qrcode");
+          qrContainer.innerHTML = "";
+          new QRCode(qrContainer, {
             text: rawToken,
             width: 200,
             height: 200,
-            colorDark: "#065f46",
+            colorDark: "#064e3b",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H,
           });
@@ -140,41 +107,34 @@
   </div>
 
   <!-- Seasonal Entitlements (Quotas) -->
-  <div class="bg-white p-6 rounded-xl shadow-sm border-2 border-slate-200">
-    <h2
-      class="text-xl font-extrabold mb-4 text-slate-800"
-      data-i18n="quota_title"
-    >
-      මගේ කන්නයේ පොහොර හිමිකම (Quota)
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <h2 class="text-lg sm:text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+      <span>🌾</span> {% trans "My Seasonal Entitlements (Quotas)" %}
     </h2>
     <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse text-base">
+      <table class="w-full text-left border-collapse text-sm sm:text-base">
         <thead>
-          <tr class="bg-slate-100 border-b-2 border-slate-300">
-            <th class="p-3 font-bold" data-i18n="col_season">කන්නය</th>
-            <th class="p-3 font-bold" data-i18n="col_product">පොහොර වර්ගය</th>
-            <th class="p-3 font-bold" data-i18n="col_approved">
-              අනුමත ප්‍රමාණය
-            </th>
-            <th class="p-3 font-bold" data-i18n="col_remaining">
-              ඉතිරි ප්‍රමාණය
-            </th>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Season" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Fertilizer" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Approved Quota" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Remaining Quota" %}</th>
           </tr>
         </thead>
         <tbody>
           {% for ent in entitlements %}
-          <tr class="border-b">
-            <td class="p-3 font-semibold">{{ ent.season.name }}</td>
-            <td class="p-3 font-semibold">{{ ent.product.name }}</td>
-            <td class="p-3">{{ ent.approved_kg }} kg</td>
-            <td class="p-3 font-extrabold text-xl text-emerald-700">
+          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-3 font-medium">{{ ent.season.name }}</td>
+            <td class="p-3 font-bold text-slate-800">{{ ent.product.name }}</td>
+            <td class="p-3 font-mono text-slate-600">{{ ent.approved_kg }} kg</td>
+            <td class="p-3 font-mono font-black {% if ent.remaining_kg > 0 %}text-emerald-700{% else %}text-slate-400{% endif %}">
               {{ ent.remaining_kg }} kg
             </td>
           </tr>
           {% empty %}
           <tr>
             <td colspan="4" class="p-4 text-center text-slate-500">
-              No entitlements assigned for this season.
+              {% trans "No fertilizer quotas recorded for this account." %}
             </td>
           </tr>
           {% endfor %}
@@ -183,81 +143,67 @@
     </div>
   </div>
 
-  <!-- Simulated SMS Receipt Notification (Latest Issue) -->
+  <!-- Simulated SMS Receipt Notification (Fixed Single-Line Template Tags) -->
   {% if latest_issue %}
-  <div
-    class="bg-amber-50 p-5 rounded-xl border-2 border-dashed border-amber-400"
-  >
-    <div class="flex justify-between items-center mb-1">
-      <span
-        class="text-xs font-extrabold uppercase tracking-wider text-amber-800"
-        >📱 Simulated SMS Receipt ({{ farmer.mobile_number }})</span
-      >
-      <span class="text-xs text-slate-500"
-        >{{ latest_issue.distributed_at|date:"Y-m-d H:i" }}</span
-      >
+  <div class="bg-amber-50 p-5 rounded-2xl border border-amber-300 shadow-sm space-y-2">
+    <div class="flex justify-between items-center">
+      <span class="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+        <span>📱</span> {% trans "SIMULATED SMS RECEIPT" %} ({{ farmer.mobile_number }})
+      </span>
+      <span class="text-xs text-slate-500">
+        {{ latest_issue.distributed_at|date:"Y-m-d H:i" }}
+      </span>
     </div>
-    <p
-      class="font-mono text-sm bg-white p-3 rounded border border-amber-200 text-slate-800"
-    >
-      <strong>FertiTracker Alert:</strong> {{ latest_issue.quantity_kg }}kg of
-      {{ latest_issue.batch.product.name }} issued at {{
-      latest_issue.asc_centre.name }}. Receipt No:
-      <strong>{{ latest_issue.receipt_number }}</strong>.
-    </p>
+    <div class="font-mono text-xs sm:text-sm bg-white p-3.5 rounded-xl border border-amber-200 text-slate-800 shadow-inner">
+      <strong>FertiTracker Alert:</strong> {{ latest_issue.quantity_kg }}kg of {{ latest_issue.batch.product.name }} issued at {{ latest_issue.asc_centre.name }}. Receipt No: <strong>{{ latest_issue.receipt_number }}</strong>.
+    </div>
   </div>
   {% endif %}
 
   <!-- Farmer Issue History & Digital Receipts -->
-  <div class="bg-white p-6 rounded-xl shadow-sm border-2 border-slate-200">
-    <h2
-      class="text-xl font-extrabold mb-4 text-slate-800"
-      data-i18n="history_title"
-    >
-      පොහොර ලබාගත් ඉතිහාසය සහ රිසිට්පත්
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <h2 class="text-lg sm:text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+      <span>📜</span> {% trans "My Fertilizer Issue History & Digital Receipts" %}
     </h2>
     <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse text-base">
+      <table class="w-full text-left border-collapse text-sm sm:text-base">
         <thead>
-          <tr class="bg-slate-100 border-b-2 border-slate-300">
-            <th class="p-3 font-bold" data-i18n="col_receipt">රිසිට් අංකය</th>
-            <th class="p-3 font-bold" data-i18n="col_asc">මධ්‍යස්ථානය (ASC)</th>
-            <th class="p-3 font-bold" data-i18n="col_qty">ප්‍රමාණය</th>
-            <th class="p-3 font-bold" data-i18n="col_date">දිනය</th>
-            <th class="p-3 font-bold" data-i18n="col_action">රිසිට්පත</th>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Receipt No" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "ASC Centre" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Quantity" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Date" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap text-right">{% trans "Action" %}</th>
           </tr>
         </thead>
         <tbody>
           {% for dist in issue_history %}
-          <tr class="border-b">
-            <td class="p-3 font-mono font-bold text-emerald-800">
+          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-3 font-mono font-bold text-emerald-800 whitespace-nowrap">
               {{ dist.receipt_number }}
             </td>
-            <td class="p-3">{{ dist.asc_centre.name }}</td>
-            <td class="p-3 font-bold">
+            <td class="p-3 whitespace-nowrap">{{ dist.asc_centre.name }}</td>
+            <td class="p-3 whitespace-nowrap font-bold text-slate-800">
               {{ dist.quantity_kg }} kg ({{ dist.batch.product.name }})
             </td>
-            <td class="p-3 text-sm text-slate-600">
+            <td class="p-3 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
               {{ dist.distributed_at|date:"Y-m-d H:i" }}
             </td>
-            <td class="p-3">
+            <td class="p-3 whitespace-nowrap text-right">
               <a
                 href="{% url 'distribution_receipt' dist.receipt_number %}"
                 target="_blank"
-                class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded"
+                class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1 shadow-sm"
               >
-                🧾 View Receipt
+                <span>🖨️</span>
+                <span>{% trans "View Receipt" %}</span>
               </a>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td
-              colspan="5"
-              class="p-4 text-center text-slate-500"
-              data-i18n="no_history"
-            >
-              තවමත් පොහොර නිකුත් කිරීම් සිදු කර නොමැත.
+            <td colspan="5" class="p-4 text-center text-slate-500">
+              {% trans "No fertilizer distributions recorded yet." %}
             </td>
           </tr>
           {% endfor %}
@@ -265,113 +211,20 @@
       </table>
     </div>
   </div>
+
 </div>
 
-<!-- Trilingual Dictionary (Sinhala / Tamil / English) & Large Font Script -->
+<!-- Controlled Accessibility Font Size Script -->
 <script>
-  const translations = {
-    si: {
-      welcome: "ආයුබෝවන්",
-      nic_label: "හැඳුනුම්පත් අංකය",
-      mobile_label: "දුරකථන",
-      qr_title: "තත්පර 60ක ආරක්ෂිත QR කේතය",
-      qr_desc:
-        "පොහොර ලබා ගැනීම සඳහා කවුන්ටරයේ නිලධාරියා ඉදිරියේදී පහත බොත්තම ඔබා QR කේතය ලබා ගන්න.",
-      qr_btn: "අලුත් QR කේතයක් ලබා ගන්න",
-      scan_here: "නිලධාරියාට මෙම QR කේතය පෙන්වන්න:",
-      qr_warn: "⚠️ තත්පර 60කින් කල් ඉකුත් වේ. Screenshot ගැනීමෙන් වළකින්න.",
-      quota_title: "මගේ කන්නයේ පොහොර හිමිකම (Quota)",
-      col_season: "කන්නය",
-      col_product: "පොහොර වර්ගය",
-      col_approved: "අනුමත ප්‍රමාණය",
-      col_remaining: "ඉතිරි ප්‍රමාණය",
-      history_title: "පොහොර ලබාගත් ඉතිහාසය සහ රිසිට්පත්",
-      col_receipt: "රිසිට් අංකය",
-      col_asc: "මධ්‍යස්ථානය (ASC)",
-      col_qty: "ප්‍රමාණය",
-      col_date: "දිනය",
-      col_action: "රිසිට්පත",
-      no_history: "තවමත් පොහොර නිකුත් කිරීම් සිදු කර නොමැත.",
-      font_btn: "විශාල අකුරු",
-    },
-    ta: {
-      welcome: "வணக்கம்",
-      nic_label: "தேசிய அடையாள எண்",
-      mobile_label: "தொலைபேசி",
-      qr_title: "60 வினாடி பாதுகாப்பான QR குறியீடு",
-      qr_desc:
-        "உரத்தைப் பெறுவதற்கு அதிகாரி முன் கீழே உள்ள பொத்தானை அழுத்தி QR குறியீட்டைப் பெறவும்.",
-      qr_btn: "புதிய QR குறியீட்டை உருவாக்கவும்",
-      scan_here: "இந்த QR குறியீட்டை அதிகாரியிடம் காட்டுங்கள்:",
-      qr_warn: "⚠️ 60 வினாடிகளில் காலாவதியாகும். ஸ்கிரீன்ஷாட் எடுக்க வேண்டாம்.",
-      quota_title: "எனது பருவகால உர ஒதுக்கீடு (Quota)",
-      col_season: "பருவம்",
-      col_product: "உர வகை",
-      col_approved: "அனுமதிக்கப்பட்ட அளவு",
-      col_remaining: "மீதமுள்ள அளவு",
-      history_title: "உரம் பெற்ற வரலாறு மற்றும் ரசீதுகள்",
-      col_receipt: "ரசீது எண்",
-      col_asc: "கமநல சேவை நிலையம்",
-      col_qty: "அளவு",
-      col_date: "திகதி",
-      col_action: "ரசீது",
-      no_history: "இதுவரை உரம் வழங்கப்படவில்லை.",
-      font_btn: "பெரிய எழுத்து",
-    },
-    en: {
-      welcome: "Welcome",
-      nic_label: "NIC Number (Masked)",
-      mobile_label: "Mobile",
-      qr_title: "Dynamic 60-Second Secure QR Code",
-      qr_desc:
-        "Press the button below in front of the ASC officer to generate a single-use QR token.",
-      qr_btn: "Generate Fresh QR Code",
-      scan_here: "Show this QR Code to the ASC Officer:",
-      qr_warn: "⚠️ Expires in 60 seconds. Do not share screenshots.",
-      quota_title: "My Seasonal Entitlements (Quotas)",
-      col_season: "Season",
-      col_product: "Fertilizer",
-      col_approved: "Approved Quota",
-      col_remaining: "Remaining Quota",
-      history_title: "My Fertilizer Issue History & Digital Receipts",
-      col_receipt: "Receipt No",
-      col_asc: "ASC Centre",
-      col_qty: "Quantity",
-      col_date: "Date",
-      col_action: "Receipt",
-      no_history: "No fertilizer distributions recorded yet.",
-      font_btn: "Large Text",
-    },
-  };
-
-  function setLang(lang) {
-    localStorage.setItem("fertitracker_lang", lang);
-    document.querySelectorAll("[data-i18n]").forEach((el) => {
-      const key = el.getAttribute("data-i18n");
-      if (translations[lang] && translations[lang][key]) {
-        el.textContent = translations[lang][key];
-      }
-    });
-    ["si", "ta", "en"].forEach((l) => {
-      const btn = document.getElementById("btn-" + l);
-      if (l === lang) {
-        btn.className =
-          "px-3 py-1.5 rounded-lg font-bold text-sm bg-white text-emerald-900 shadow";
-      } else {
-        btn.className =
-          "px-3 py-1.5 rounded-lg font-bold text-sm bg-emerald-800 text-white hover:bg-emerald-700";
-      }
-    });
-  }
-
   function toggleLargeFont() {
     const app = document.getElementById("farmer-app");
-    app.classList.toggle("text-xl");
+    if (app.classList.contains("text-base")) {
+      app.classList.remove("text-base");
+      app.classList.add("text-lg");
+    } else {
+      app.classList.remove("text-lg");
+      app.classList.add("text-base");
+    }
   }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const savedLang = localStorage.getItem("fertitracker_lang") || "si";
-    setLang(savedLang);
-  });
 </script>
 {% endblock %}

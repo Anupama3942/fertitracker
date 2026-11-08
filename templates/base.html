@@ -1,152 +1,218 @@
+{% load i18n static %}
 <!DOCTYPE html>
-<html lang="si">
+{% get_current_language as CURRENT_LANGUAGE %}
+<html lang="{{ CURRENT_LANGUAGE }}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FertiTracker - Fertilizer Traceability System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>{% trans "FertiTracker" %} - {% trans "Fertilizer Traceability System" %}</title>
+
+    <!-- Local Offline Tailwind CSS (Runs with zero internet during Expo demo) -->
+    <script src="{% static 'vendor/tailwindcss.js' %}"></script>
+
+    <!-- Local Offline Fonts (Inter + Noto Sans Sinhala + Noto Sans Tamil) -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}" />
+
+    <style>
+      body {
+        font-family: 'Inter', 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Nirmala UI', 'Iskoola Pota', 'Latha', system-ui, -apple-system, sans-serif;
+      }
+      /* Ensure minimum touch target for mobile friendliness and non-tech users */
+      .touch-target {
+        min-height: 48px;
+      }
+    </style>
   </head>
-  <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+  <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased">
+    
+    <!-- Top Government Utility Bar -->
+    <header class="bg-emerald-900 text-emerald-100 text-xs py-1.5 px-4 border-b border-emerald-800">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <span class="tracking-wide hidden sm:inline">
+          🏛️ {% trans "National Fertilizer Distribution Traceability System" %} &bull; Sri Lanka
+        </span>
+        <span class="tracking-wide sm:hidden">
+          🏛️ FertiTracker Sri Lanka
+        </span>
+
+        <!-- Universal Language Switcher (Always accessible from every page) -->
+        <form action="{% url 'set_language' %}" method="post" class="inline-flex items-center bg-emerald-950/70 p-0.5 rounded-md border border-emerald-700/60 shadow-inner">
+          {% csrf_token %}
+          <input name="next" type="hidden" value="{{ request.get_full_path }}" />
+          
+          <button
+            type="submit"
+            name="language"
+            value="en"
+            title="English"
+            class="px-2.5 py-1 rounded text-xs font-semibold transition {% if CURRENT_LANGUAGE == 'en' %}bg-white text-emerald-900 shadow font-bold{% else %}text-emerald-200 hover:text-white hover:bg-emerald-800/60{% endif %}"
+          >
+            English
+          </button>
+          
+          <button
+            type="submit"
+            name="language"
+            value="si"
+            title="සිංහල"
+            class="px-2.5 py-1 rounded text-xs font-semibold transition {% if CURRENT_LANGUAGE == 'si' %}bg-white text-emerald-900 shadow font-bold{% else %}text-emerald-200 hover:text-white hover:bg-emerald-800/60{% endif %}"
+          >
+            සිංහල
+          </button>
+          
+          <button
+            type="submit"
+            name="language"
+            value="ta"
+            title="தமிழ்"
+            class="px-2.5 py-1 rounded text-xs font-semibold transition {% if CURRENT_LANGUAGE == 'ta' %}bg-white text-emerald-900 shadow font-bold{% else %}text-emerald-200 hover:text-white hover:bg-emerald-800/60{% endif %}"
+          >
+            தமிழ்
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <!-- Main Navigation Bar -->
     <nav class="bg-emerald-800 text-white shadow-md">
-      <div
-        class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3"
-      >
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+        <!-- Logo -->
         <a
           href="{% url 'dashboard' %}"
-          class="text-xl font-bold tracking-wide flex items-center gap-2"
-          >🌱 <span class="tracking-wider">FertiTracker</span></a
+          class="text-xl md:text-2xl font-extrabold tracking-wide flex items-center gap-2 hover:text-emerald-100 transition"
         >
+          🌱 <span>FertiTracker</span>
+        </a>
 
+        <!-- Role-based Navigation Links -->
         {% if user.is_authenticated %}
-        <div
-          class="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm"
-        >
-          <!-- 1. Show the inventory page to all roles except farmers. -->
-          {% if user.role != 'FARMER' %}
-          <a
-            href="{% url 'inventory_list' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Inventory</a
-          >
-          <a
-            href="{% url 'reports_search' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Reports</a
-          >
-          {% endif %}
-
-          <!-- 2. Show the farmer's QR and quota page only to farmers. -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
+          
+          <!-- Farmer navigation -->
           {% if user.role == 'FARMER' %}
           <a
             href="{% url 'farmer_dashboard' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >My QR & Quota</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 shadow-sm"
           >
+            📱 {% trans "My QR & Quota" %}
+          </a>
           {% endif %}
 
-          <!-- 3. Show the QR scanner page to ASC officers and administrators. -->
-          {% if user.role == 'ADMIN' %}
+          <!-- ASC Officer navigation -->
+          {% if user.role == 'ASC_OFFICER' or user.role == 'ADMIN' or user.is_superuser %}
           <a
             href="{% url 'asc_scanner' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Scanner</a
+            class="bg-amber-500 hover:bg-amber-600 text-slate-900 px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 shadow-sm"
           >
+            📷 {% trans "QR Scanner" %}
+          </a>
           <a
             href="{% url 'manage_farmers' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Farmers</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition"
           >
-          {% else %} {% if user.role == 'ASC_OFFICER' %}
-          <a
-            href="{% url 'asc_scanner' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Scanner</a
-          >
-          <a
-            href="{% url 'manage_farmers' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Farmers</a
-          >
-          {% else %} {% if user.is_superuser %}
-          <a
-            href="{% url 'asc_scanner' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Scanner</a
-          >
-          <a
-            href="{% url 'manage_farmers' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Farmers</a
-          >
-          {% endif %} {% endif %} {% endif %}
+            👨‍🌾 {% trans "Farmers" %}
+          </a>
+          {% endif %}
 
-          <!-- 4. Show the audit log page to auditors and administrators. -->
-          {% if user.role == 'ADMIN' %}
+          <!-- Warehouse & Inventory navigation -->
+          {% if user.role != 'FARMER' %}
+          <a
+            href="{% url 'inventory_list' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition"
+          >
+            📦 {% trans "Inventory" %}
+          </a>
+          <a
+            href="{% url 'reports_search' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition"
+          >
+            📊 {% trans "Reports" %}
+          </a>
+          {% endif %}
+
+          <!-- Auditor navigation -->
+          {% if user.role == 'AUDITOR' or user.role == 'ADMIN' or user.is_superuser %}
           <a
             href="{% url 'audit_logs' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Audit Logs</a
+            class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition"
           >
-          {% else %} {% if user.role == 'AUDITOR' %}
-          <a
-            href="{% url 'audit_logs' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Audit Logs</a
-          >
-          {% else %} {% if user.is_superuser %}
-          <a
-            href="{% url 'audit_logs' %}"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Audit Logs</a
-          >
-          {% endif %} {% endif %} {% endif %}
+            🛡️ {% trans "Audit Logs" %}
+          </a>
+          {% endif %}
 
-          <span
-            class="bg-emerald-900 px-2.5 py-1 rounded-full text-[11px] md:text-xs"
-          >
-            {{ user.username }} | <strong>{{ user.get_role_display }}</strong>
-            {% if user.asc_centre %} ({{ user.asc_centre.name }}){% endif %}
-          </span>
-
+          <!-- Django Admin shortcut for admins -->
           {% if user.role == 'ADMIN' or user.is_superuser %}
           <a
             href="/admin/"
-            class="bg-emerald-700 hover:bg-emerald-600 px-2.5 py-1.5 rounded font-medium transition"
-            >Admin</a
+            class="bg-emerald-950/80 hover:bg-emerald-900 px-3 py-2 rounded-lg font-medium transition text-emerald-200"
           >
+            ⚙️ {% trans "Admin" %}
+          </a>
           {% endif %}
 
+          <!-- User Role Badge -->
+          <div class="bg-emerald-950/90 text-emerald-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-emerald-700/50 flex items-center gap-1">
+            <span>👤 <strong>{{ user.username }}</strong></span>
+            <span class="text-emerald-400">({{ user.get_role_display }})</span>
+            {% if user.asc_centre %}
+            <span class="text-amber-300 font-semibold">• {{ user.asc_centre.name }}</span>
+            {% endif %}
+          </div>
+
+          <!-- Logout Button -->
           <form method="post" action="{% url 'logout' %}" class="inline">
             {% csrf_token %}
             <button
               type="submit"
-              class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded font-semibold text-xs transition"
+              class="bg-rose-700 hover:bg-rose-800 text-white px-3.5 py-2 rounded-lg font-semibold text-xs transition shadow-sm"
             >
-              Logout
+              🚪 {% trans "Logout" %}
             </button>
           </form>
+        </div>
+        {% else %}
+        <div class="flex items-center gap-2">
+          <a
+            href="{% url 'login' %}"
+            class="bg-white text-emerald-900 hover:bg-emerald-50 px-4 py-2 rounded-lg font-bold text-sm transition shadow-sm"
+          >
+            🔑 {% trans "Login" %}
+          </a>
         </div>
         {% endif %}
       </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-3 sm:px-4 py-4 md:py-6 flex-grow w-full">
-      {% if messages %} {% for message in messages %}
-      <div
-        class="mb-4 p-3 rounded-lg bg-blue-100 text-blue-900 border border-blue-300 text-xs md:text-sm font-medium shadow-sm"
-      >
-        {{ message }}
+    <!-- Main Content Container (Large font, comfortable spacing for non-tech users) -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+      {% if messages %}
+      <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div
+          class="p-4 rounded-xl font-medium text-sm md:text-base shadow-sm border flex items-center gap-3 {% if message.tags == 'error' %}bg-rose-50 border-rose-300 text-rose-900{% elif message.tags == 'success' %}bg-emerald-50 border-emerald-300 text-emerald-900{% else %}bg-blue-50 border-blue-300 text-blue-900{% endif %}"
+        >
+          <span class="text-xl">
+            {% if message.tags == 'error' %}⚠️{% elif message.tags == 'success' %}✅{% else %}ℹ️{% endif %}
+          </span>
+          <div>{{ message }}</div>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %} {% endif %} {% block content %}{% endblock %}
+      {% endif %}
+
+      {% block content %}{% endblock %}
     </main>
 
-    <footer
-      class="bg-slate-800 text-slate-400 text-center py-4 text-xs mt-auto"
-    >
-      <p>
-        FertiTracker - National Fertilizer Distribution Traceability System |
-        Mobile-Optimized Prototype
-      </p>
+    <!-- Accessible Government Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-6 text-xs border-t border-slate-800 mt-auto">
+      <div class="max-w-7xl mx-auto px-4 text-center space-y-1">
+        <p class="font-medium text-slate-300 text-sm">
+          🌱 FertiTracker &bull; Department of Agrarian Development &bull; Sri Lanka
+        </p>
+        <p class="text-slate-500">
+          Individual Software Engineering Project (TICT3153) &bull; University of Vavuniya &bull; ICT Expo 5.0
+        </p>
+      </div>
     </footer>
   </body>
 </html>

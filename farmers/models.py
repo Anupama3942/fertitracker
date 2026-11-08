@@ -45,6 +45,7 @@ class FarmerEntitlement(models.Model):
 class QRToken(models.Model):
     farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name='qr_tokens')
     token_hash = models.CharField(max_length=255, unique=True)  # Store only a hash of the QR data on the server.
+    code_hash = models.CharField(max_length=255, null=True, blank=True)  # Hashed 6-digit backup code
     expires_at = models.DateTimeField()
     is_redeemed = models.BooleanField(default=False)
 
@@ -52,10 +53,14 @@ class QRToken(models.Model):
     def generate_token_for_farmer(cls, farmer):
         """
         Generate a dynamic opaque token that expires in 60 seconds and store its cryptographic hash (FR-10, Section 11.2).
+        Also generates a 6-digit backup code tied to the same token.
         """
         import uuid
+        import random
         raw_token = uuid.uuid4().hex + uuid.uuid4().hex
         hashed_token = hashlib.sha256(raw_token.encode()).hexdigest()
+        raw_code = f"{random.randint(100000, 999999)}"
+        hashed_code = hashlib.sha256(raw_code.encode()).hexdigest()
         expiry = timezone.now() + timedelta(seconds=60)  # Set a 60-second lifetime.
 
         # Invalidate any previous unused tokens for this farmer.
@@ -64,9 +69,10 @@ class QRToken(models.Model):
         obj = cls.objects.create(
             farmer=farmer,
             token_hash=hashed_token,
+            code_hash=hashed_code,
             expires_at=expiry
         )
-        return raw_token, obj
+        return raw_token, raw_code, obj
 
     def is_valid(self):
         """Return whether the token is unused and has not expired."""

@@ -1,0 +1,454 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: FertiTracker 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-08 22:00+0530\n"
+"PO-Revision-Date: 2026-11-08 22:00+0530\n"
+"Language: si\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "FertiTracker"
+msgstr "ෆර්ටි ට්‍රැකර් (FertiTracker)"
+
+msgid "Fertilizer Traceability System"
+msgstr "පොහොර තොග සහ බෙදාහැරීම් සොයාගැනීමේ පද්ධතිය"
+
+msgid "National Fertilizer Distribution Traceability System"
+msgstr "ජාතික පොහොර බෙදාහැරීම් සොයාගැනීමේ පද්ධතිය"
+
+msgid "Inventory"
+msgstr "පොහොර තොග"
+
+msgid "Reports"
+msgstr "වාර්තා"
+
+msgid "My QR & Quota"
+msgstr "මගේ QR කේතය සහ හිමිකම"
+
+msgid "QR Scanner"
+msgstr "QR ස්කෑනරය"
+
+msgid "Scanner"
+msgstr "ස්කෑනරය"
+
+msgid "Farmers"
+msgstr "ගොවීන්"
+
+msgid "Audit Logs"
+msgstr "විගණන සටහන්"
+
+msgid "Admin"
+msgstr "පරිපාලක"
+
+msgid "Logout"
+msgstr "ඉවත් වන්න"
+
+msgid "Login"
+msgstr "ඇතුල් වන්න"
+
+msgid "Username"
+msgstr "පරිශීලක නාමය"
+
+msgid "Password"
+msgstr "මුරපදය"
+
+msgid "System Administrator"
+msgstr "පද්ධති පරිපාලක"
+
+msgid "Warehouse Officer"
+msgstr "ගබඩා නිලධාරී"
+
+msgid "ASC Officer"
+msgstr "ගොවිජන සේවා මධ්‍යස්ථාන නිලධාරී"
+
+msgid "Auditor"
+msgstr "විගණක"
+
+msgid "Farmer"
+msgstr "ගොවි මහතා"
+
+msgid "Active Season"
+msgstr "ක්‍රියාකාරී කන්නය"
+
+msgid "Verify & Issue Fertilizer (Atomic)"
+msgstr "තහවුරු කර පොහොර නිකුත් කරන්න"
+
+msgid "Scan Farmer QR & Issue Fertilizer"
+msgstr "ගොවි QR කේතය ස්කෑන් කර පොහොර නිකුත් කිරීම"
+
+msgid "Distribution Successful!"
+msgstr "පොහොර නිකුත් කිරීම සාර්ථකයි!"
+
+msgid "Receipt"
+msgstr "රිසිට්පත"
+
+msgid "Issued Quantity"
+msgstr "නිකුත් කළ ප්‍රමාණය"
+
+msgid "View Digital Receipt"
+msgstr "ඩිජිටල් රිසිට්පත බලන්න"
+
+msgid "English"
+msgstr "English"
+
+msgid "Sinhala"
+msgstr "සිංහල"
+
+msgid "Tamil"
+msgstr "தமிழ்"
+
+msgid "Enter username or NIC"
+msgstr "පරිශීලක නාමය හෝ ජා.හැ. අංකය ඇතුළත් කරන්න"
+
+msgid "Activate Farmer Account"
+msgstr "ගොවි ගිණුම සක්‍රිය කරන්න"
+
+msgid "Forgot Password?"
+msgstr "මුරපදය අමතක වීද?"
+
+msgid "Username or password is incorrect. Please try again."
+msgstr "පරිශීලක නාමය හෝ මුරපදය වැරදියි. කරුණාකර නැවත උත්සාහ කරන්න."
+
+msgid "ASC Counter"
+msgstr "ගොවිජන සේවා කවුන්ටරය"
+
+msgid "Officer"
+msgstr "නිලධාරී"
+
+msgid "No Active Season"
+msgstr "ක්‍රියාකාරී කන්නයක් නොමැත"
+
+msgid "Stock deducted and quota updated atomically."
+msgstr "තොග සහ කෝටාව සාර්ථකව යාවත්කාලීන කරන ලදී."
+
+msgid "Issued"
+msgstr "නිකුත් කරන ලදී"
+
+msgid "Receipt Number"
+msgstr "රිසිට්පත් අංකය"
+
+msgid "Farmer Name"
+msgstr "ගොවි මහතාගේ නම"
+
+msgid "Batch Dispatched"
+msgstr "නිකුත් කළ තොග කාණ්ඩය"
+
+msgid "Bag"
+msgstr "මිටිය"
+
+msgid "Scan Next Farmer"
+msgstr "ඊළඟ ගොවියා ස්කෑන් කරන්න"
+
+msgid "Live Camera Scanner"
+msgstr "කැමරා ස්කෑනරය"
+
+msgid "Manual Code Entry"
+msgstr "අතින් කේතය ඇතුළත් කිරීම"
+
+msgid "Active"
+msgstr "ක්‍රියාකාරී"
+
+msgid "No active season available"
+msgstr "ක්‍රියාකාරී කන්නයක් නොමැත"
+
+msgid "Camera starting..."
+msgstr "කැමරාව ක්‍රියාත්මක වෙමින් පවතී..."
+
+msgid "Camera"
+msgstr "කැමරාව"
+
+msgid "Default (Rear Camera)"
+msgstr "පසුපස කැමරාව (Default)"
+
+msgid "Camera Access Unavailable"
+msgstr "කැමරාවට ප්‍රවේශ විය නොහැක"
+
+msgid "Please allow camera access in your browser settings, or use Manual Code Entry below."
+msgstr "කරුණාකර ඔබගේ බ්‍රවුසරයේ කැමරා අවසර ලබා දෙන්න, නැතහොත් පහතින් අතින් කේතය ඇතුළත් කරන්න."
+
+msgid "Retry Camera"
+msgstr "නැවත උත්සාහ කරන්න"
+
+msgid "Switch to Manual Entry"
+msgstr "අතින් ඇතුළත් කිරීමට මාරු වන්න"
+
+msgid "Hold the camera steady in front of the farmer's smartphone screen or printed token. The scanner will automatically detect the QR and trigger verification."
+msgstr "ගොවි මහතාගේ දුරකථනයේ QR කේතය ඉදිරියෙන් කැමරාව ස්ථාවරව තබා ගන්න. ස්කෑනරය මඟින් එය ස්වයංක්‍රීයව හඳුනාගනු ඇත."
+
+msgid "Enter 64-character QR Token String or SMS Code"
+msgstr "අක්ෂර 64 කින් යුත් QR ටෝකනය හෝ SMS කේතය ඇතුළත් කරන්න"
+
+msgid "Paste raw token string here (e.g. 5d9f3a...)"
+msgstr "ටෝකනය මෙහි ඇතුළත් කරන්න..."
+
+msgid "Use this fallback when the device camera is broken, unavailable, or when scanning under poor lighting."
+msgstr "කැමරාව ක්‍රියා නොකරන විට හෝ ආලෝකය අඩු විට මෙම ක්‍රමය භාවිතා කරන්න."
+
+msgid "QR Code Detected & Ready"
+msgstr "QR කේතය සාර්ථකව හඳුනාගන්නා ලදී"
+
+msgid "Security & Traceability Note"
+msgstr "ආරක්ෂාව සහ සොයාගැනීමේ සටහන"
+
+msgid "QR tokens are dynamic and expire after 60 seconds."
+msgstr "QR කේතය තත්පර 60කින් කල් ඉකුත් වේ."
+
+msgid "The token contains no personal data (NIC, name, land size). Only an opaque random hash is exchanged."
+msgstr "QR කේතයේ පුද්ගලික තොරතුරු (ජා.හැ. අංකය, නම) අඩංගු නොවේ."
+
+msgid "Stock deduction occurs atomically using row-level database locks (PostgreSQL select_for_update)."
+msgstr "තොග අඩු කිරීම දත්ත සමුදායේ ආරක්ෂිතව (Row-level lock) එකවර සිදු වේ."
+
+msgid "For testing on local phones, access over HTTPS (Cloudflare Tunnel or localhost)."
+msgstr "ජංගම දුරකථන වලින් පරීක්ෂා කිරීමට HTTPS භාවිතා කරන්න."
+
+msgid "Accessing camera..."
+msgstr "කැමරාව සම්බන්ධ වෙමින්..."
+
+msgid "Camera active - Aim at Farmer's QR"
+msgstr "කැමරාව සූදානම් - QR කේතය වෙත යොමු කරන්න"
+
+msgid "Camera unavailable"
+msgstr "කැමරාව නොමැත"
+
+msgid "Camera access was denied or requires HTTPS connection."
+msgstr "කැමරා අවසරය ප්‍රතික්ෂේප කර ඇත හෝ HTTPS සම්බන්ධතාවයක් අවශ්‍ය වේ."
+
+msgid "Scanner stopped."
+msgstr "ස්කෑනරය නවතා ඇත."
+
+msgid "Warehouse Stock Dispatch"
+msgstr "ගබඩා තොග පිටත් කිරීම"
+
+msgid "From"
+msgstr "සිට"
+
+msgid "To"
+msgstr "දක්වා"
+
+msgid "Dispatched at"
+msgstr "පිටත් කළ දිනය"
+
+msgid "Status"
+msgstr "තත්ත්වය"
+
+msgid "Manifest QR Code"
+msgstr "තොග පත්‍රිකා QR කේතය"
+
+msgid "Recorded Discrepancy on this Dispatch"
+msgstr "මෙම පිටත් කිරීමේ වාර්තාගත විෂමතා"
+
+msgid "Logged by"
+msgstr "සටහන් කළේ"
+
+msgid "Damaged Bags"
+msgstr "හානි වූ මිටි"
+
+msgid "Missing Bags"
+msgstr "අඩු වූ මිටි"
+
+msgid "Reconciliation & Usable Stock Verification"
+msgstr "තොග ගැලපීම සහ ප්‍රයෝජ්‍ය තොග තහවුරු කිරීම"
+
+msgid "Read-Only (Receiving Completed)"
+msgstr "කියවීම පමණි (තොග භාරගැනීම අවසන්)"
+
+msgid "Batch & Product"
+msgstr "කාණ්ඩය සහ නිෂ්පාදනය"
+
+msgid "Dispatched"
+msgstr "පිටත් කළ"
+
+msgid "Good Condition"
+msgstr "හොඳ තත්ත්වයේ"
+
+msgid "Damaged"
+msgstr "හානි වූ"
+
+msgid "Missing (Auto)"
+msgstr "අඩු වූ (ස්වයංක්‍රීය)"
+
+msgid "Discrepancy Incident Reason (Mandatory)"
+msgstr "විෂමතාවයට හේතුව (අනිවාර්යයි)"
+
+msgid "Explain why bags were damaged or missing in transit (e.g. rain damage during lorry transport, count shortage)..."
+msgstr "ප්‍රවාහනයේදී මිටි හානි වීමට හෝ අඩු වීමට හේතුව විස්තර කරන්න..."
+
+msgid "This note will be permanently logged in the audit ledger and flagged for Auditor inspection."
+msgstr "මෙම සටහන ස්ථිරවම විගණන ලේඛනයේ සටහන් වන අතර විගණක පරීක්ෂාව සඳහා යොමු කෙරේ."
+
+msgid "Usable bags to add to ASC Stock"
+msgstr "ගොවිජන සේවා තොගයට එක්වන ප්‍රයෝජ්‍ය මිටි"
+
+msgid "Total Discrepancies"
+msgstr "මුළු විෂමතා"
+
+msgid "Confirm Receipt & Update ASC Usable Stock (Atomic)"
+msgstr "භාරගැනීම තහවුරු කර ගොවිජන සේවා තොගය යාවත්කාලීන කරන්න"
+
+msgid "Auditor & Supply Chain Oversight"
+msgstr "විගණන සහ සැපයුම් දාම අධීක්ෂණය"
+
+msgid "Discrepancy & Damaged Stock Report"
+msgstr "විෂමතා සහ හානි වූ තොග වාර්තාව"
+
+msgid "Official log of damaged or missing fertilizer bags recorded during ASC receiving."
+msgstr "ගොවිජන සේවා මධ්‍යස්ථානයේදී භාරගැනීමේදී සටහන් වූ හානි වූ හෝ අඩු වූ පොහොර මිටි පිළිබඳ නිල සටහන."
+
+msgid "Total Damaged"
+msgstr "මුළු හානි වූ"
+
+msgid "Total Missing"
+msgstr "මුළු අඩු වූ"
+
+msgid "Bags"
+msgstr "මිටි"
+
+msgid "Filter by ASC"
+msgstr "මධ්‍යස්ථානය අනුව පෙරන්න"
+
+msgid "All ASC Centres"
+msgstr "සියලුම මධ්‍යස්ථාන"
+
+msgid "From Date"
+msgstr "සිට දිනය"
+
+msgid "To Date"
+msgstr "දක්වා දිනය"
+
+msgid "Filter"
+msgstr "පෙරන්න"
+
+msgid "Reset"
+msgstr "යළි පිහිටුවන්න"
+
+msgid "Dispatch Ref"
+msgstr "පිටත් කිරීමේ අංකය"
+
+msgid "Route"
+msgstr "ගමන් මාර්ගය"
+
+msgid "Incident Reason / Notes"
+msgstr "සිදුවීමට හේතුව / සටහන්"
+
+msgid "Recorded By"
+msgstr "සටහන් කළ නිලධාරී"
+
+msgid "Timestamp"
+msgstr "දිනය සහ වේලාව"
+
+msgid "Manifest"
+msgstr "පත්‍රිකාව"
+
+msgid "View"
+msgstr "බලන්න"
+
+msgid "No discrepancy incidents recorded for this criteria."
+msgstr "මෙම නිර්ණායකය සඳහා කිසිදු විෂමතාවයක් වාර්තා වී නොමැත."
+
+msgid "Step 2: Confirm Farmer & Issue Details"
+msgstr "පියවර 2: ගොවි තොරතුරු සහ නිකුත් කිරීම තහවුරු කරන්න"
+
+msgid "Verification Passed"
+msgstr "තහවුරු කිරීම සාර්ථකයි"
+
+msgid "Masked NIC"
+msgstr "ජාතික හැඳුනුම්පත් අංකය"
+
+msgid "Fertilizer Product"
+msgstr "පොහොර වර්ගය"
+
+msgid "Remaining Quota"
+msgstr "ඉතිරි කෝටාව"
+
+msgid "ASC Stock on Hand (FEFO Priority)"
+msgstr "මධ්‍යස්ථානයේ පවතින තොග (FEFO ප්‍රමුඛතාවය)"
+
+msgid "Available in this batch"
+msgstr "මෙම කාණ්ඩයේ පවතින ප්‍රමාණය"
+
+msgid "Confirm Issue Quantity (kg)"
+msgstr "නිකුත් කරන ප්‍රමාණය තහවුරු කරන්න (kg)"
+
+msgid "Maximum deliverable from available stock and quota"
+msgstr "පවතින තොග සහ කෝටාව අනුව ලබාදිය හැකි උපරිම ප්‍රමාණය"
+
+msgid "Confirm & Issue Fertilizer"
+msgstr "තහවුරු කර පොහොර නිකුත් කරන්න"
+
+msgid "Cancel"
+msgstr "අවලංගු කරන්න"
+
+msgid "Note: The QR token remains unredeemed and valid until you press Confirm."
+msgstr "සටහන: ඔබ තහවුරු කරන තුරු QR කේතය වලංගුව පවතී."
+
+msgid "Manual 6-Digit Code Entry"
+msgstr "ඉලක්කම් 6ක අතින් කේතය ඇතුළත් කිරීම"
+
+msgid "Enter 6-Digit Farmer Backup Code"
+msgstr "ගොවි මහතාගේ ඉලක්කම් 6ක අතිරේක කේතය ඇතුළත් කරන්න"
+
+msgid "Ask the farmer for the 6-digit backup code displayed under their QR code."
+msgstr "ගොවි මහතාගේ QR කේතය යටතේ දිස්වන ඉලක්කම් 6ක කේතය විමසන්න."
+
+msgid "Code Detected & Ready for Verification"
+msgstr "කේතය හඳුනාගන්නා ලදී - තහවුරු කිරීමට සූදානම්"
+
+msgid "Verify Farmer Code"
+msgstr "ගොවි කේතය තහවුරු කරන්න"
+
+msgid "Backup 6-Digit Code"
+msgstr "අතිරේක ඉලක්කම් 6ක කේතය"
+
+msgid "Officer can type this code if camera fails"
+msgstr "කැමරාව ක්‍රියා නොකරන්නේ නම් නිලධාරියාට මෙම කේතය ටයිප් කළ හැක"
+
+msgid "Present this QR code to the ASC Officer"
+msgstr "මෙම QR කේතය ගොවිජන සේවා නිලධාරියාට පෙන්වන්න"
+
+msgid "Generate a single-use secure QR code before presenting at the counter. The code expires in 60 seconds."
+msgstr "කවුන්ටරයට ඉදිරිපත් කිරීමට පෙර තනි භාවිත ආරක්ෂිත QR කේතයක් ලබා ගන්න. කේතය තත්පර 60කින් කල් ඉකුත් වේ."
+
+msgid "Welcome"
+msgstr "ආයුබෝවන්"
+
+msgid "NIC"
+msgstr "ජා.හැ.අංකය"
+
+msgid "Mobile"
+msgstr "දුරකථන අංකය"
+
+msgid "Approved Quota"
+msgstr "අනුමත කෝටාව"
+
+msgid "Toggle Size"
+msgstr "අකුරු විශාල කරන්න"
+
+msgid "No fertilizer quotas recorded for this account."
+msgstr "මෙම ගිණුම සඳහා පොහොර කෝටාවක් සටහන් වී නොමැත."
+
+msgid "SIMULATED SMS RECEIPT"
+msgstr "අනුකරණය කරන ලද SMS රිසිට්පත"
+
+msgid "My Fertilizer Issue History & Digital Receipts"
+msgstr "මගේ පොහොර ලබාගැනීමේ ඉතිහාසය සහ ඩිජිටල් රිසිට්පත්"
+
+msgid "Receipt No"
+msgstr "රිසිට්පත් අංකය"
+
+msgid "Quantity"
+msgstr "ප්‍රමාණය"
+
+msgid "Date"
+msgstr "දිනය"
+
+msgid "Action"
+msgstr "ක්‍රියාව"
+
+msgid "View Receipt"
+msgstr "රිසිට්පත බලන්න"
+
+msgid "No fertilizer distributions recorded yet."
+msgstr "තවමත් පොහොර නිකුත් කිරීම් සිදු කර නොමැත."

@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <span class="text-xs uppercase font-extrabold tracking-wider text-rose-800 bg-rose-100 px-3 py-1 rounded-full">
+        {% trans "Auditor & Supply Chain Oversight" %}
+      </span>
+      <h1 class="text-2xl sm:text-3xl font-black text-slate-800 mt-2">
+        {% trans "Discrepancy & Damaged Stock Report" %}
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Official log of damaged or missing fertilizer bags recorded during ASC receiving." %}
+      </p>
+    </div>
+
+    <!-- Summary KPI Badges -->
+    <div class="flex items-center gap-3">
+      <div class="bg-amber-50 border border-amber-300 p-3 rounded-xl text-center min-w-[110px]">
+        <span class="text-xs font-bold text-amber-800 uppercase block">{% trans "Total Damaged" %}</span>
+        <span class="text-2xl font-black text-amber-900 font-mono">{{ total_damaged }}</span>
+        <span class="text-[11px] text-amber-700 block">{% trans "Bags" %}</span>
+      </div>
+      <div class="bg-rose-50 border border-rose-300 p-3 rounded-xl text-center min-w-[110px]">
+        <span class="text-xs font-bold text-rose-800 uppercase block">{% trans "Total Missing" %}</span>
+        <span class="text-2xl font-black text-rose-900 font-mono">{{ total_missing }}</span>
+        <span class="text-[11px] text-rose-700 block">{% trans "Bags" %}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Form -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end text-sm">
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "Filter by ASC" %}</label>
+        <select name="asc" class="w-full border-2 border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-600">
+          <option value="">{% trans "All ASC Centres" %}</option>
+          {% for asc in asc_centres %}
+          <option value="{{ asc.id }}" {% if selected_asc == asc.id|stringformat:"s" %}selected{% endif %}>
+            {{ asc.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "From Date" %}</label>
+        <input type="date" name="start_date" value="{{ start_date|default:'' }}" class="w-full border-2 border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-emerald-600" />
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "To Date" %}</label>
+        <input type="date" name="end_date" value="{{ end_date|default:'' }}" class="w-full border-2 border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-emerald-600" />
+      </div>
+
+      <div class="flex gap-2">
+        <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 rounded-xl shadow transition">
+          🔍 {% trans "Filter" %}
+        </button>
+        <a href="{% url 'discrepancy_report' %}" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2.5 px-4 rounded-xl transition">
+          {% trans "Reset" %}
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Discrepancy Table -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Dispatch Ref" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Route" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap text-center text-amber-800">{% trans "Damaged Bags" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap text-center text-rose-700">{% trans "Missing Bags" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Incident Reason / Notes" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Recorded By" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap">{% trans "Timestamp" %}</th>
+            <th class="p-3 font-bold whitespace-nowrap text-right">{% trans "Manifest" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in discrepancies %}
+          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-3 font-mono font-bold text-emerald-900 whitespace-nowrap">
+              {{ d.dispatch.dispatch_reference }}
+            </td>
+            <td class="p-3 whitespace-nowrap">
+              {{ d.dispatch.warehouse.name }} &rarr; <strong>{{ d.dispatch.asc_centre.name }}</strong>
+            </td>
+            <td class="p-3 text-center font-mono font-black text-amber-700">
+              {{ d.damaged_bags }}
+            </td>
+            <td class="p-3 text-center font-mono font-black text-rose-600">
+              {{ d.missing_bags }}
+            </td>
+            <td class="p-3 text-xs text-slate-700 max-w-xs break-words">
+              &ldquo;{{ d.reason }}&rdquo;
+            </td>
+            <td class="p-3 text-xs whitespace-nowrap text-slate-600">
+              {{ d.recorded_by.username }}
+            </td>
+            <td class="p-3 text-xs text-slate-500 whitespace-nowrap">
+              {{ d.created_at|date:"Y-m-d H:i" }}
+            </td>
+            <td class="p-3 whitespace-nowrap text-right">
+              <a href="{% url 'receive_dispatch' d.dispatch.id %}" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                {% trans "View" %} &rarr;
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="p-6 text-center text-slate-500">
+              ✅ {% trans "No discrepancy incidents recorded for this criteria." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

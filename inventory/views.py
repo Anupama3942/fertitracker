@@ -125,9 +125,11 @@ def receive_dispatch_view(request, dispatch_id):
             received_dict[str(item.id)] = request.POST.get(f"received_{item.id}", 0)
             damaged_dict[str(item.id)] = request.POST.get(f"damaged_{item.id}", 0)
 
+        discrepancy_reason = request.POST.get('discrepancy_reason', '').strip()
+
         try:
-            confirm_dispatch_receiving(dispatch.id, request.user, received_dict, damaged_dict)
-            messages.success(request, f"Dispatch {dispatch.dispatch_reference} was confirmed successfully and the ASC stock was updated!")
+            confirm_dispatch_receiving(dispatch.id, request.user, received_dict, damaged_dict, discrepancy_reason)
+            messages.success(request, f"Dispatch {dispatch.dispatch_reference} confirmed successfully and ASC usable stock updated!")
             return redirect('receive_dispatch', dispatch_id=dispatch.id)
         except ValidationError as e:
             messages.error(request, e.message)
@@ -136,5 +138,43 @@ def receive_dispatch_view(request, dispatch_id):
         'dispatch': dispatch,
         'items': items,
         'qr_base64': qr_base64,
+        'discrepancies': dispatch.discrepancies.select_related('recorded_by').all(),
     }
     return render(request, 'inventory/receive_dispatch.html', context)
+
+
+@role_required('ADMIN', 'AUDITOR', 'WAREHOUSE_OFFICER', 'ASC_OFFICER')
+def discrepancy_report_view(request):
+    """
+    Discrepancy Report listing dispatches with damaged or missing bags.
+    Filterable by ASC and date range, with running totals.
+    """
+    from .models import Discrepancy
+    asc_id = request.GET.get('asc')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    discrepancies = Discrepancy.objects.select_related(
+        'dispatch__asc_centre', 'dispatch__warehouse', 'recorded_by'
+    ).order_by('-created_at')
+
+    if asc_id:
+        discrepancies = discrepancies.filter(dispatch__asc_centre_id=asc_id)
+    if start_date:
+        discrepancies = discrepancies.filter(created_at__date__gte=start_date)
+    if end_date:
+        discrepancies = discrepancies.filter(created_at__date__lte=end_date)
+
+    total_damaged = sum(d.damaged_bags for d in discrepancies)
+    total_missing = sum(d.missing_bags for d in discrepancies)
+
+    context = {
+        'discrepancies': discrepancies,
+        'asc_centres': ASCCentre.objects.all(),
+        'selected_asc': asc_id,
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_damaged': total_damaged,
+        'total_missing': total_missing,
+    }
+    return render(request, 'inventory/discrepancy_report.html', context)

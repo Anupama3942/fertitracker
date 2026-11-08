@@ -20,9 +20,10 @@ class FertilizerBatch(models.Model):
     
 class StockDispatch(models.Model):
     class StatusChoices(models.TextChoices):
-        DISPATCHED  = 'DISPATCHED', 'Dispatched'
-        RECEIVED    = 'RECEIVED', 'Received'
-        DISCREPANCY = 'DISCREPANCY', 'Received with Discrepancy'
+        DISPATCHED                  = 'DISPATCHED', 'Dispatched'
+        RECEIVED                    = 'RECEIVED', 'Received'
+        RECEIVED_WITH_DISCREPANCY   = 'RECEIVED_WITH_DISCREPANCY', 'Received with Discrepancy'
+        DISCREPANCY                 = 'DISCREPANCY', 'Received with Discrepancy'
         
     warehouse   = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='dispatches')
     
@@ -98,8 +99,23 @@ class StockMovement(models.Model):
     stock           = models.ForeignKey(ASCStock, on_delete=models.PROTECT, related_name='movements')
     movement_type   = models.CharField(max_length=30, choices=MovementTypeChoices.choices)
     quantity_kg     = models.DecimalField(max_digits=10, decimal_places=2)
+    dispatch        = models.ForeignKey(StockDispatch, on_delete=models.SET_NULL, null=True, blank=True, related_name='movements')
+    created_by      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_movements')
+    notes           = models.CharField(max_length=255, blank=True, null=True)
     created_at      = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         """Return the movement type, quantity, and ASC centre."""
         return f"{self.movement_type} - {self.quantity_kg} kg ({self.stock.asc_centre.name})"
+
+
+class Discrepancy(models.Model):
+    dispatch = models.ForeignKey(StockDispatch, on_delete=models.CASCADE, related_name='discrepancies')
+    damaged_bags = models.PositiveIntegerField(default=0)
+    missing_bags = models.PositiveIntegerField(default=0)
+    reason = models.TextField()
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='recorded_discrepancies')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Discrepancy for {self.dispatch.dispatch_reference}: {self.damaged_bags} damaged, {self.missing_bags} missing"

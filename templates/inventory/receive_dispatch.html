@@ -1,67 +1,266 @@
 {% extends 'base.html' %}
+{% load i18n %}
+
 {% block content %}
-<div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 max-w-4xl mx-auto">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6">
-        <div>
-            <span class="text-xs uppercase font-bold tracking-wider text-slate-400">Dispatch Manifest</span>
-            <h1 class="text-2xl font-mono font-bold text-slate-800">{{ dispatch.dispatch_reference }}</h1>
-            <p class="text-sm text-slate-600 mt-1">
-                From: <strong>{{ dispatch.warehouse.name }}</strong> → To: <strong>{{ dispatch.asc_centre.name }}</strong>
-            </p>
-            <p class="text-xs text-slate-500 mt-1">Dispatched at: {{ dispatch.dispatched_at }} | Status: <strong>{{ dispatch.get_status_display }}</strong></p>
-        </div>
-        <div class="mt-4 md:mt-0 text-center">
-            <img src="data:image/png;base64,{{ qr_base64 }}" alt="Dispatch QR" class="w-28 h-28 mx-auto border p-1 rounded">
-            <span class="text-xs font-mono text-slate-500">Dispatch QR (FR-06)</span>
-        </div>
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- Dispatch Manifest Header -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <span class="text-xs uppercase font-extrabold tracking-wider text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full">
+        {% trans "Warehouse Stock Dispatch" %}
+      </span>
+      <h1 class="text-2xl sm:text-3xl font-mono font-black text-slate-900 mt-2">
+        {{ dispatch.dispatch_reference }}
+      </h1>
+      <p class="text-sm sm:text-base text-slate-600 mt-1">
+        {% trans "From" %}: <strong>{{ dispatch.warehouse.name }}</strong> &rarr; 
+        {% trans "To" %}: <strong class="text-emerald-900">{{ dispatch.asc_centre.name }}</strong>
+      </p>
+      <p class="text-xs text-slate-500 mt-1">
+        {% trans "Dispatched at" %}: {{ dispatch.dispatched_at|date:"Y-m-d H:i" }} &bull; 
+        {% trans "Status" %}: 
+        <strong class="{% if dispatch.status == 'RECEIVED' %}text-emerald-700{% elif dispatch.status == 'DISPATCHED' %}text-blue-600{% else %}text-amber-700{% endif %}">
+          {{ dispatch.get_status_display }}
+        </strong>
+      </p>
     </div>
 
-    <form method="post">
-        {% csrf_token %}
-        <table class="w-full text-left border-collapse text-sm mb-6">
-            <thead>
-                <tr class="bg-slate-100 border-b">
-                    <th class="p-3">Batch & Product</th>
-                    <th class="p-3">Dispatched Bags</th>
-                    <th class="p-3">Good Received Bags</th>
-                    <th class="p-3">Damaged Bags</th>
-                    <th class="p-3">Missing Bags</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr class="border-b">
-                    <td class="p-3 font-medium">{{ item.batch.batch_number }} ({{ item.batch.product.name }})</td>
-                    <td class="p-3 font-bold">{{ item.dispatched_bags }}</td>
-                    <td class="p-3">
-                        {% if dispatch.status == 'DISPATCHED' %}
-                            <input type="number" name="received_{{ item.id }}" value="{{ item.dispatched_bags }}" min="0" max="{{ item.dispatched_bags }}" required class="border rounded px-2 py-1 w-24">
-                        {% else %}
-                            <span class="font-bold text-emerald-700">{{ item.received_bags }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="p-3">
-                        {% if dispatch.status == 'DISPATCHED' %}
-                            <input type="number" name="damaged_{{ item.id }}" value="0" min="0" max="{{ item.dispatched_bags }}" required class="border rounded px-2 py-1 w-24">
-                        {% else %}
-                            <span class="font-bold text-amber-700">{{ item.damaged_bags }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="p-3 font-bold text-red-600">
-                        {% if dispatch.status == 'DISPATCHED' %}-{% else %}{{ item.missing_bags }}{% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Printable / Scannable Manifest QR -->
+    <div class="text-center p-3 bg-slate-50 rounded-xl border border-slate-200">
+      <img src="data:image/png;base64,{{ qr_base64 }}" alt="Dispatch QR" class="w-24 h-24 mx-auto border p-1 rounded-lg bg-white shadow-sm" />
+      <span class="text-[11px] font-mono text-slate-500 block mt-1">{% trans "Manifest QR Code" %}</span>
+    </div>
+  </div>
 
-        {% if dispatch.status == 'DISPATCHED' and user.role in 'ADMIN,ASC_OFFICER' %}
-        <div class="flex justify-end">
-            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-2 rounded">
-                Confirm Receipt & Update ASC Stock (Atomic)
-            </button>
+  <!-- Discrepancy Alert If Already Logged -->
+  {% if discrepancies %}
+  <div class="bg-amber-50 border-2 border-amber-400 p-5 rounded-2xl shadow-sm space-y-2">
+    <h3 class="font-black text-amber-900 flex items-center gap-2 text-base">
+      <span>⚠️</span> {% trans "Recorded Discrepancy on this Dispatch" %}
+    </h3>
+    {% for disc in discrepancies %}
+    <div class="bg-white p-4 rounded-xl border border-amber-200 text-sm space-y-1">
+      <div class="flex justify-between items-center text-xs text-slate-500">
+        <span>{% trans "Logged by" %}: <strong>{{ disc.recorded_by.username }}</strong></span>
+        <span>{{ disc.created_at|date:"Y-m-d H:i" }}</span>
+      </div>
+      <p class="font-bold text-amber-900">
+        {{ disc.damaged_bags }} {% trans "Damaged Bags" %}, {{ disc.missing_bags }} {% trans "Missing Bags" %}
+      </p>
+      <p class="text-slate-700 text-xs italic">
+        &ldquo;{{ disc.reason }}&rdquo;
+      </p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Receiving Form Table -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+      <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+        <span>📦</span> {% trans "Reconciliation & Usable Stock Verification" %}
+      </h2>
+      {% if dispatch.status != 'DISPATCHED' %}
+      <span class="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full uppercase">
+        {% trans "Read-Only (Receiving Completed)" %}
+      </span>
+      {% endif %}
+    </div>
+
+    <form method="post" id="receiving-form" class="p-6 space-y-6">
+      {% csrf_token %}
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm sm:text-base">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
+              <th class="p-3 font-bold whitespace-nowrap">{% trans "Batch & Product" %}</th>
+              <th class="p-3 font-bold whitespace-nowrap text-center">{% trans "Dispatched" %}</th>
+              <th class="p-3 font-bold whitespace-nowrap text-center">{% trans "Good Condition" %}</th>
+              <th class="p-3 font-bold whitespace-nowrap text-center">{% trans "Damaged" %}</th>
+              <th class="p-3 font-bold whitespace-nowrap text-center">{% trans "Missing (Auto)" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr class="border-b border-slate-100" data-item-id="{{ item.id }}" data-dispatched="{{ item.dispatched_bags }}">
+              <td class="p-3 font-medium">
+                <span class="font-bold text-slate-900 block">{{ item.batch.product.name }}</span>
+                <span class="font-mono text-xs text-slate-500">Batch: {{ item.batch.batch_number }} (Exp: {{ item.batch.expiry_date }})</span>
+              </td>
+              
+              <td class="p-3 font-black text-center font-mono text-base">
+                {{ item.dispatched_bags }}
+              </td>
+
+              <!-- Good Received Bags -->
+              <td class="p-3 text-center">
+                {% if dispatch.status == 'DISPATCHED' %}
+                <input
+                  type="number"
+                  name="received_{{ item.id }}"
+                  id="rec_{{ item.id }}"
+                  value="{{ item.dispatched_bags }}"
+                  min="0"
+                  max="{{ item.dispatched_bags }}"
+                  required
+                  class="good-input w-28 border-2 border-emerald-500 rounded-xl px-3 py-2.5 text-center font-bold text-base font-mono outline-none focus:ring-2 focus:ring-emerald-200"
+                />
+                {% else %}
+                <span class="font-bold font-mono text-emerald-700 text-base">{{ item.received_bags }}</span>
+                {% endif %}
+              </td>
+
+              <!-- Damaged Bags -->
+              <td class="p-3 text-center">
+                {% if dispatch.status == 'DISPATCHED' %}
+                <input
+                  type="number"
+                  name="damaged_{{ item.id }}"
+                  id="dmg_{{ item.id }}"
+                  value="0"
+                  min="0"
+                  max="{{ item.dispatched_bags }}"
+                  required
+                  class="damaged-input w-28 border-2 border-amber-400 rounded-xl px-3 py-2.5 text-center font-bold text-base font-mono outline-none focus:ring-2 focus:ring-amber-200"
+                />
+                {% else %}
+                <span class="font-bold font-mono text-amber-700 text-base">{{ item.damaged_bags }}</span>
+                {% endif %}
+              </td>
+
+              <!-- Missing Bags (Calculated Live) -->
+              <td class="p-3 text-center font-black font-mono text-base text-rose-600" id="missing_{{ item.id }}">
+                {% if dispatch.status == 'DISPATCHED' %}
+                0
+                {% else %}
+                {{ item.missing_bags }}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Discrepancy Reason Field (Shown dynamically when damaged > 0 or missing > 0) -->
+      {% if dispatch.status == 'DISPATCHED' %}
+      <div id="discrepancy-reason-box" class="hidden bg-amber-50 border-2 border-amber-300 p-5 rounded-2xl space-y-2">
+        <label for="discrepancy_reason" class="block text-sm font-black text-amber-900">
+          ⚠️ {% trans "Discrepancy Incident Reason (Mandatory)" %}:
+        </label>
+        <textarea
+          name="discrepancy_reason"
+          id="discrepancy_reason"
+          rows="3"
+          placeholder="{% trans "Explain why bags were damaged or missing in transit (e.g. rain damage during lorry transport, count shortage)..." %}"
+          class="w-full border-2 border-amber-300 rounded-xl p-3 text-sm focus:border-amber-600 focus:ring-2 focus:ring-amber-200 outline-none"
+        ></textarea>
+        <p class="text-xs text-amber-800">
+          {% trans "This note will be permanently logged in the audit ledger and flagged for Auditor inspection." %}
+        </p>
+      </div>
+
+      <!-- Live Calculation Summary Banner -->
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-wrap justify-between items-center text-sm gap-2">
+        <div>
+          <span class="text-slate-500">{% trans "Usable bags to add to ASC Stock" %}:</span>
+          <strong id="total-usable-display" class="text-emerald-700 text-base font-mono">0</strong>
         </div>
-        {% endif %}
+        <div>
+          <span class="text-slate-500">{% trans "Total Discrepancies" %}:</span>
+          <strong id="total-discrepancy-display" class="text-slate-700 text-base font-mono">0</strong>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      {% if user.role in 'ADMIN,ASC_OFFICER' %}
+      <div class="pt-4 flex justify-end">
+        <button
+          type="submit"
+          class="touch-target bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-extrabold text-lg py-4 px-8 rounded-xl shadow-md transition duration-150 transform active:scale-[0.99] flex items-center justify-center gap-2"
+        >
+          <span>✅</span>
+          <span>{% trans "Confirm Receipt & Update ASC Usable Stock (Atomic)" %}</span>
+        </button>
+      </div>
+      {% endif %}
+      {% endif %}
+
     </form>
+  </div>
+
 </div>
+
+<!-- Real-Time Client-Side Calculation Script -->
+<script>
+  function recalculateReconciliation() {
+    let totalUsable = 0;
+    let totalDamaged = 0;
+    let totalMissing = 0;
+
+    const rows = document.querySelectorAll("tr[data-item-id]");
+    rows.forEach(row => {
+      const itemId = row.getAttribute("data-item-id");
+      const dispatched = parseInt(row.getAttribute("data-dispatched") || 0);
+
+      const recInput = document.getElementById("rec_" + itemId);
+      const dmgInput = document.getElementById("dmg_" + itemId);
+      const missingCell = document.getElementById("missing_" + itemId);
+
+      if (recInput && dmgInput && missingCell) {
+        let recVal = parseInt(recInput.value) || 0;
+        let dmgVal = parseInt(dmgInput.value) || 0;
+
+        if (recVal < 0) recVal = 0;
+        if (dmgVal < 0) dmgVal = 0;
+
+        // Missing = Dispatched - Good - Damaged
+        let missing = dispatched - (recVal + dmgVal);
+        if (missing < 0) {
+          missingCell.textContent = "Error (> Dispatched)";
+          missingCell.className = "p-3 text-center font-black font-mono text-base text-rose-700";
+        } else {
+          missingCell.textContent = missing;
+          missingCell.className = missing > 0 
+            ? "p-3 text-center font-black font-mono text-base text-rose-600" 
+            : "p-3 text-center font-black font-mono text-base text-slate-400";
+        }
+
+        totalUsable += recVal;
+        totalDamaged += dmgVal;
+        if (missing > 0) totalMissing += missing;
+      }
+    });
+
+    const totalUsableDisp = document.getElementById("total-usable-display");
+    const totalDiscrepancyDisp = document.getElementById("total-discrepancy-display");
+    const reasonBox = document.getElementById("discrepancy-reason-box");
+    const reasonTextarea = document.getElementById("discrepancy_reason");
+
+    if (totalUsableDisp) totalUsableDisp.textContent = `${totalUsable} bags`;
+    if (totalDiscrepancyDisp) totalDiscrepancyDisp.textContent = `${totalDamaged} damaged, ${totalMissing} missing`;
+
+    // If there is any damaged or missing stock, require discrepancy reason note
+    if (reasonBox && reasonTextarea) {
+      if (totalDamaged > 0 || totalMissing > 0) {
+        reasonBox.classList.remove("hidden");
+        reasonTextarea.required = true;
+      } else {
+        reasonBox.classList.add("hidden");
+        reasonTextarea.required = false;
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const inputs = document.querySelectorAll(".good-input, .damaged-input");
+    inputs.forEach(input => {
+      input.addEventListener("input", recalculateReconciliation);
+    });
+    recalculateReconciliation();
+  });
+</script>
 {% endblock %}

@@ -34,9 +34,10 @@ def farmer_qr_dashboard(request):
     latest_issue = issue_history.first()
 
     raw_token = None
+    raw_code = None
     if request.method == 'POST':
-        raw_token, qr_obj = QRToken.generate_token_for_farmer(farmer)
-        messages.success(request, "තත්පර 60ක් සඳහා වලංගු නව QR කේතයක් උත්පාදනය කරන ලදී! / புதிய QR குறியீடு உருவாக்கப்பட்டது!")
+        raw_token, raw_code, qr_obj = QRToken.generate_token_for_farmer(farmer)
+        messages.success(request, "Dynamic QR code generated (valid for 60 seconds).")
 
     active_token = farmer.qr_tokens.filter(is_redeemed=False).order_by('-expires_at').first()
     is_active_valid = active_token.is_valid() if active_token else False
@@ -47,6 +48,7 @@ def farmer_qr_dashboard(request):
         'issue_history': issue_history,
         'latest_issue': latest_issue,
         'raw_token': raw_token,
+        'raw_code': raw_code,
         'is_active_valid': is_active_valid,
     }
     return render(request, 'distributions/farmer_dashboard.html', context)
@@ -55,24 +57,46 @@ def farmer_qr_dashboard(request):
 @role_required('ADMIN', 'ASC_OFFICER')
 def asc_scanner_view(request):
     """
-    Allow an ASC officer to scan a farmer QR token and issue fertilizer (FR-11, FR-12).
+    Allow an ASC officer to scan/enter a farmer QR or 6-digit code.
+    Flow: Scan/Code -> Verify (no redemption) -> Confirmation Screen -> Confirm & Issue.
     """
+    from .services import verify_farmer_token, confirm_issue_distribution
+
     seasons = Season.objects.filter(status='ACTIVE')
+    verification = None
     distribution = None
 
     if request.method == 'POST':
+        action = request.POST.get('action', 'verify')
         token_string = request.POST.get('token_string', '').strip()
         season_id = request.POST.get('season')
         client_ip = request.META.get('REMOTE_ADDR')
 
-        try:
-            distribution = process_qr_distribution(token_string, request.user, season_id, client_ip)
-            messages.success(request, f"Fertilizer issued successfully. Receipt number: {distribution.receipt_number}")
-        except ValidationError as e:
-            messages.error(request, e.message)
+        if action == 'verify':
+            # Step 1 & 2: Verify without redeeming
+            try:
+                verification = verify_farmer_token(token_string, request.user, season_id)
+            except ValidationError as e:
+                messages.error(request, e.message)
+
+        elif action == 'confirm':
+            # Step 3 & 4: Execute atomic issue
+            quantity_kg = request.POST.get('quantity_kg')
+            try:
+                distribution = confirm_issue_distribution(
+                    raw_input_string=token_string,
+                    asc_officer_user=request.user,
+                    season_id=season_id,
+                    quantity_kg=Decimal(quantity_kg) if quantity_kg else None,
+                    client_ip=client_ip
+                )
+                messages.success(request, f"Fertilizer issued successfully. Receipt number: {distribution.receipt_number}")
+            except (ValidationError, Exception) as e:
+                messages.error(request, getattr(e, 'message', str(e)))
 
     context = {
         'seasons': seasons,
+        'verification': verification,
         'distribution': distribution,
     }
     return render(request, 'distributions/asc_scanner.html', context)
