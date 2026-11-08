@@ -7,6 +7,7 @@ class Warehouse(models.Model):
     location    = models.CharField(max_length=255)
     
     def __str__(self):
+        """Return the warehouse name and location."""
         return f"{self.name} ({self.location})"
     
 class ASCCentre(models.Model):
@@ -15,6 +16,7 @@ class ASCCentre(models.Model):
     address = models.CharField(max_length=255)
     
     def __str__(self):
+        """Return the ASC centre name and district."""
         return f"{self.name} - {self.district}"
         
 class Season(models.Model):
@@ -33,6 +35,7 @@ class Season(models.Model):
     ) 
     
     def __str__(self):
+        """Return the season name and status."""
         return f"{self.name} ({self.status})"
     
 class FertilizerProduct(models.Model):
@@ -40,4 +43,5 @@ class FertilizerProduct(models.Model):
     bag_weight_kg = models.DecimalField(max_digits=8, decimal_places=2)
     
     def __str__(self):
+        """Return the fertilizer product name and bag weight."""
         return f"{self.name} ({self.bag_weight_kg} kg)"

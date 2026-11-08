@@ -10,16 +10,24 @@ from .services import process_qr_distribution
 @role_required('FARMER')
 def farmer_qr_dashboard(request):
     """
-    ගොවියාට තමන්ගේ QR token එක උත්පාදනය කර ගැනීමට සහ කෝටා තත්ත්වය බලාගැනීමට ඇති පිටුව (FR-10).
+    Page for farmers to generate their QR token and view their quota status (FR-10).
     """
-    farmer = get_object_or_404(Farmer, user=request.user)
+    farmer = Farmer.objects.filter(user=request.user).first()
+    if not farmer:
+        messages.error(
+            request,
+            "Your Farmer profile has not been linked to your user account yet. "
+            "Please contact an administrator.",
+        )
+        return redirect('dashboard')
+
     entitlements = farmer.entitlements.select_related('season', 'product').all()
     
     raw_token = None
     if request.method == 'POST':
-        # නව QR ටෝකනයක් උත්පාදනය කිරීම (තත්පර 60ක ආයු කාලයක් සහිතව)
+        # Generate a new QR token with a 60-second lifetime.
         raw_token, qr_obj = QRToken.generate_token_for_farmer(farmer)
-        messages.success(request, "තත්පර 60ක් සඳහා වලංගු නව QR ටෝකනයක් උත්පාදනය කරන ලදී!")
+        messages.success(request, "A new QR token valid for 60 seconds was generated!")
 
     active_token = farmer.qr_tokens.filter(is_redeemed=False).order_by('-expires_at').first()
     is_active_valid = active_token.is_valid() if active_token else False
@@ -36,7 +44,7 @@ def farmer_qr_dashboard(request):
 @role_required('ADMIN', 'ASC_OFFICER')
 def asc_scanner_view(request):
     """
-    ASC නිලධාරියාට ගොවියාගේ QR ටෝකනය scan කර පොහොර නිකුත් කිරීමට ඇති පිටුව (FR-11, FR-12).
+    Allow an ASC officer to scan a farmer QR token and issue fertilizer (FR-11, FR-12).
     """
     seasons = Season.objects.filter(status='ACTIVE')
     distribution = None
@@ -48,7 +56,7 @@ def asc_scanner_view(request):
 
         try:
             distribution = process_qr_distribution(token_string, request.user, season_id, client_ip)
-            messages.success(request, f"පොහොර නිකුත් කිරීම සාර්ථකයි! රිසිට්පත් අංකය: {distribution.receipt_number}")
+            messages.success(request, f"Fertilizer issued successfully. Receipt number: {distribution.receipt_number}")
         except ValidationError as e:
             messages.error(request, e.message)
 
@@ -62,7 +70,7 @@ def asc_scanner_view(request):
 @role_required('ADMIN', 'ASC_OFFICER', 'AUDITOR', 'FARMER')
 def distribution_receipt_view(request, receipt_number):
     """
-    නිකුත් කළ පොහොර සඳහා ඩිජිටල් රිසිට්පත පෙන්වීම (FR-18).
+    Display the digital receipt for an issued fertilizer distribution (FR-18).
     """
     distribution = get_object_or_404(
         FertilizerDistribution.objects.select_related('farmer', 'asc_centre', 'batch__product', 'season', 'issued_by'),
@@ -74,7 +82,7 @@ def distribution_receipt_view(request, receipt_number):
 @role_required('ADMIN', 'AUDITOR')
 def audit_logs_view(request):
     """
-    විගණකාධිපති (Auditor) සඳහා Append-only Audit Logs පෙන්වන පිටුව (FR-17).
+    Display append-only audit logs for auditors (FR-17).
     """
     logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:100]
     return render(request, 'distributions/audit_logs.html', {'logs': logs})

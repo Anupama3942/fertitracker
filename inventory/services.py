@@ -8,8 +8,7 @@ from .models import StockDispatch, DispatchItem, ASCStock, StockMovement
 
 def generate_qr_base64(data_string):
     """
-    Generate a QR code for the provided text and convert it into a Base64 string
-    that can be displayed directly on an HTML page without saving a separate image file (FR-06).
+    Generate a QR code and return it as an embeddable Base64 PNG string (FR-06).
     """
     qr = qrcode.QRCode(version=1, box_size=6, border=2)
     qr.add_data(data_string)

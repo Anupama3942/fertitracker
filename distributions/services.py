@@ -9,69 +9,69 @@ from .models import FertilizerDistribution, AuditLog
 @transaction.atomic
 def process_qr_distribution(raw_token_string, asc_officer_user, season_id, client_ip=None):
     """
-    ගොවියාගේ QR ටෝකනය පරීක්ෂා කර, Atomic Transaction එකක් මඟින් පොහොර නිකුත් කිරීම සිදු කරයි (FR-11, FR-12, FR-17).
+    Validate a farmer QR token and issue fertilizer in an atomic transaction (FR-11, FR-12, FR-17).
     """
     import hashlib
     hashed_input = hashlib.sha256(raw_token_string.encode()).hexdigest()
 
-    # 1. ටෝකනය සෙවීම සහ වලංගුභාවය පරීක්ෂා කිරීම (තත්පර 60ක කාල සීමාව)
+    # 1. Find the token and verify its validity within the 60-second lifetime.
     try:
         qr_token = QRToken.objects.select_for_update().get(token_hash=hashed_input)
     except QRToken.DoesNotExist:
-        raise ValidationError("අවලංගු හෝ කල් ඉකුත් වූ QR ටෝකනයකි.")
+        raise ValidationError("The QR token is invalid or has expired.")
 
     if not qr_token.is_valid():
-        raise ValidationError("මෙම QR ටෝකනය දැනටමත් භාවිත කර ඇත හෝ කාලය අවසන් වී ඇත.")
+        raise ValidationError("This QR token has already been used or has expired.")
 
     farmer = qr_token.farmer
 
-    # 2. ASC නිලධාරියාගේ බලපත්‍රය පරීක්ෂා කිරීම (Business Rule 12 / FR-20)
+    # 2. Verify that the requesting officer belongs to the relevant ASC (Business Rule 12 / FR-20).
     if asc_officer_user.role == 'ASC_OFFICER' and asc_officer_user.asc_centre:
         asc_centre = asc_officer_user.asc_centre
     else:
-        raise ValidationError("පොහොර නිකුත් කළ හැක්කේ අදාළ ASC නිලධාරියාට පමණි.")
+        raise ValidationError("Only an officer from the relevant ASC can issue fertilizer.")
 
-    # 3. ගොවියාට අදාළ කන්නයේ (Season) හිමිකම (Entitlement) ලබා ගැනීම
+    # 3. Retrieve the farmer's entitlement for the selected season.
     try:
         entitlement = FarmerEntitlement.objects.select_for_update().get(
             farmer=farmer,
             season_id=season_id,
-            product__name__iexact='Urea'  # උදාහරණයක් ලෙස ප්‍රධාන පොහොර නිෂ්පාදනය
+            product__name__iexact='Urea'  # Urea is the primary fertilizer product for this workflow.
         )
     except FarmerEntitlement.DoesNotExist:
-        raise ValidationError("මෙම ගොවියාට අදාළ කන්නය සඳහා පොහොර හිමිකම් (Entitlements) වාර්තාවක් නොමැත.")
+        raise ValidationError("No fertilizer entitlement exists for this farmer and season.")
 
-    # නිකුත් කිරීමට නියමිත ප්‍රමාණය (උදා: මල්ලක් හෝ නිශ්චිත කිලෝග්‍රෑම් ප්‍රමාණයක් - මෙහිදී මල්ලක් 50kg ලෙස සලකමු)
+    # Set the issue quantity to one 50 kg bag for this workflow.
     issue_kg = Decimal('50.00')
 
     if entitlement.remaining_kg < issue_kg:
-        raise ValidationError(f"ගොවියාගේ ඉතිරි කෝටාව ප්‍රමාණවත් නොවේ. ඉතිරි ප්‍රමාණය: {entitlement.remaining_kg} kg පමණි.")
+        raise ValidationError(f"The farmer's remaining quota is insufficient. Remaining: {entitlement.remaining_kg} kg.")
 
-    # 4. ASC ගබඩාවේ තොගය (FEFO පිළිවෙළට මුලින්ම කල් ඉකුත් වන Batch එක) ලබා ගැනීම
+    # 4. Select ASC stock using FEFO: the batch with the earliest expiry date.
     asc_stock = ASCStock.objects.select_for_update().filter(
         asc_centre=asc_centre,
         bags_on_hand__gt=0
     ).order_by('batch__expiry_date').first()
 
     if not asc_stock or asc_stock.bags_on_hand < 1:
-        raise ValidationError("මෙම ASC ගබඩාවේ ගොවීන්ට නිකුත් කිරීමට ප්‍රමාණවත් පොහොර තොග නොමැත.")
+        raise ValidationError("The ASC has insufficient fertilizer stock for issue to farmers.")
 
     batch = asc_stock.batch
 
-    # 5. තොග සහ කෝටා යාවත්කාලීන කිරීම (Atomic updates)
-    # අ) ගොවියාගේ ඉතිරි කෝටාව අඩු කිරීම
+    # 5. Update stock and quota atomically.
+    # a) Reduce the farmer's remaining quota.
     entitlement.remaining_kg -= issue_kg
     entitlement.save()
 
-    # ආ) ASC ගබඩා තොගය අඩු කිරීම (මලු 1කින්)
+    # b) Reduce ASC stock by one bag.
     asc_stock.bags_on_hand -= 1
     asc_stock.save()
 
-    # ඇ) QR ටෝකනය පාවිච්චි කළ බවට (Redeemed) සටහන් කිරීම
+    # c) Mark the QR token as redeemed.
     qr_token.is_redeemed = True
     qr_token.save()
 
-    #ඈ) Distribution වාර්තාවක් සෑදීම
+    # d) Create the fertilizer distribution record.
     distribution = FertilizerDistribution.objects.create(
         farmer=farmer,
         asc_centre=asc_centre,
@@ -81,14 +81,14 @@ def process_qr_distribution(raw_token_string, asc_officer_user, season_id, clien
         quantity_kg=issue_kg
     )
 
-    # ඉ) Stock Movement ලෙජරයේ OUTBOUND සටහන් කිරීම (FR-17)
+    # e) Record the OUTBOUND stock movement in the ledger (FR-17).
     StockMovement.objects.create(
         stock=asc_stock,
         movement_type=StockMovement.MovementTypeChoices.OUTBOUND,
         quantity_kg=issue_kg
     )
 
-    # ஈ) Append-only Audit Log එකක් ලිවීම
+    # f) Write an append-only audit log entry.
     AuditLog.objects.create(
         user=asc_officer_user,
         action=f"DISTRIBUTION_ISSUED: {distribution.receipt_number}",

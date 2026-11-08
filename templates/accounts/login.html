@@ -41,6 +41,19 @@
     >
       Sign In
     </button>
+
+    <div class="flex justify-between text-xs mt-2">
+      <a
+        href="{% url 'activate_account' %}"
+        class="text-emerald-700 hover:underline"
+        >Activate Farmer Account</a
+      >
+      <a
+        href="{% url 'password_reset_request' %}"
+        class="text-slate-600 hover:underline"
+        >Forgot Password?</a
+      >
+    </div>
   </form>
 </div>
 {% endblock %}

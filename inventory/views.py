@@ -9,6 +9,7 @@ from .services import generate_qr_base64, confirm_dispatch_receiving
 
 @role_required('ADMIN', 'WAREHOUSE_OFFICER', 'ASC_OFFICER', 'AUDITOR')
 def inventory_list_view(request):
+    """Render FEFO-ordered ASC stock and warehouse dispatches for authorized users."""
     user = request.user
     dispatches = StockDispatch.objects.select_related('warehouse', 'asc_centre', 'created_by').order_by('-dispatched_at')
     # FEFO (First-Expired-First-Out): Sort stock by expiry date.
@@ -44,6 +45,7 @@ def inventory_list_view(request):
 
 @role_required('ADMIN', 'WAREHOUSE_OFFICER')
 def create_batch_view(request):
+    """Create a unique fertilizer batch and render the batch form."""
     if request.method == 'POST':
         warehouse_id = request.POST.get('warehouse')
         product_id = request.POST.get('product')
@@ -71,6 +73,7 @@ def create_batch_view(request):
 
 @role_required('ADMIN', 'WAREHOUSE_OFFICER')
 def create_dispatch_view(request):
+    """Create a warehouse-to-ASC dispatch and redirect to its receiving page."""
     if request.method == 'POST':
         warehouse_id = request.POST.get('warehouse')
         asc_centre_id = request.POST.get('asc_centre')
@@ -103,6 +106,7 @@ def create_dispatch_view(request):
 
 @role_required('ADMIN', 'WAREHOUSE_OFFICER', 'ASC_OFFICER', 'AUDITOR')
 def receive_dispatch_view(request, dispatch_id):
+    """Display a dispatch and process its received, damaged, and missing quantities."""
     dispatch = get_object_or_404(
         StockDispatch.objects.select_related('warehouse', 'asc_centre', 'created_by'),
         id=dispatch_id

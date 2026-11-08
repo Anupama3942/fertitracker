@@ -17,11 +17,13 @@ class FertilizerDistribution(models.Model):
     distributed_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        """Generate a receipt number when needed, then save the distribution."""
         if not self.receipt_number:
             self.receipt_number = f"REC-{uuid.uuid4().hex[:10].upper()}"
         super().save(*args, **kwargs)
 
     def __str__(self):
+        """Return the receipt number, farmer, and issued quantity."""
         return f"{self.receipt_number} - {self.farmer.full_name} ({self.quantity_kg} kg)"
 
 
@@ -33,5 +35,6 @@ class AuditLog(models.Model):
     details = models.TextField(blank=True, null=True)
 
     def __str__(self):
+        """Return a readable timestamped audit action description."""
         username = self.user.username if self.user else "System"
         return f"[{self.timestamp}] {username}: {self.action}"

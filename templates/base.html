@@ -17,7 +17,7 @@
 
         {% if user.is_authenticated %}
         <div class="flex items-center gap-4 text-sm">
-          <!-- 1. ගොවියා හැර අනෙක් නිලධාරීන්ට Inventory පිටුව පෙන්වීම -->
+          <!-- 1. Show the inventory page to all roles except farmers. -->
           {% if user.role != 'FARMER' %}
           <a
             href="{% url 'inventory_list' %}"
@@ -26,7 +26,7 @@
           >
           {% endif %}
 
-          <!-- 2. ගොවියාට පමණක් තමන්ගේ QR සහ කෝටා පිටුව පෙන්වීම -->
+          <!-- 2. Show the farmer's QR and quota page only to farmers. -->
           {% if user.role == 'FARMER' %}
           <a
             href="{% url 'farmer_dashboard' %}"
@@ -35,21 +35,35 @@
           >
           {% endif %}
 
-          <!-- 3. ASC Officer සහ Admin ට පමණක් QR Scanner පිටුව පෙන්වීම -->
-          {% if user.role == 'ADMIN' or user.role == 'ASC_OFFICER' or
-          user.is_superuser %}
+          <!-- 3. Show the QR scanner page to ASC officers and administrators. -->
+          {% if user.role == 'ADMIN' %}
           <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
             >ASC Scanner</a
           >
-          {% endif %}
+          {% else %} {% if user.role == 'ASC_OFFICER' %}
+          <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
+            >ASC Scanner</a
+          >
+          {% else %} {% if user.is_superuser %}
+          <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
+            >ASC Scanner</a
+          >
+          {% endif %} {% endif %} {% endif %}
 
-          <!-- 4. Auditor සහ Admin ට පමණක් Audit Logs පිටුව පෙන්වීම -->
-          {% if user.role == 'ADMIN' or user.role == 'AUDITOR' or
-          user.is_superuser %}
+          <!-- 4. Show the audit log page to auditors and administrators. -->
+          {% if user.role == 'ADMIN' %}
           <a href="{% url 'audit_logs' %}" class="hover:underline font-medium"
             >Audit Logs</a
           >
-          {% endif %}
+          {% else %} {% if user.role == 'AUDITOR' %}
+          <a href="{% url 'audit_logs' %}" class="hover:underline font-medium"
+            >Audit Logs</a
+          >
+          {% else %} {% if user.is_superuser %}
+          <a href="{% url 'audit_logs' %}" class="hover:underline font-medium"
+            >Audit Logs</a
+          >
+          {% endif %} {% endif %} {% endif %}
 
           <span class="bg-emerald-700 px-3 py-1 rounded-full">
             {{ user.username }} | <strong>{{ user.get_role_display }}</strong>

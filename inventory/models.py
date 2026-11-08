@@ -15,6 +15,7 @@ class FertilizerBatch(models.Model):
     expiry_date = models.DateField()
     
     def __str__(self):
+        """Return the batch number, product name, and expiry date."""
         return f"{self.batch_number} - {self.product.name} (Exp: {self.expiry_date})"
     
 class StockDispatch(models.Model):
@@ -36,11 +37,13 @@ class StockDispatch(models.Model):
     
     
     def save(self, *args, **kwargs):
+        """Generate a dispatch reference when needed, then save the dispatch."""
         if not self.dispatch_reference:
             self.dispatch_reference = f"{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
         
     def __str__(self):
+        """Return the dispatch reference and its warehouse-to-ASC route."""
         return f"{self.dispatch_reference} ({self.warehouse.name} -> {self.asc_centre.name})"
     
 class DispatchItem(models.Model):
@@ -52,11 +55,13 @@ class DispatchItem(models.Model):
 
     @property
     def missing_bags(self):
+        """Return dispatched bags not accounted for as received or damaged."""
         # FR-07: Missing bags are calculated by subtracting received and damaged bags from dispatched bags.
         diff = self.dispatched_bags - (self.received_bags + self.damaged_bags)
         return max(diff, 0)
 
     def __str__(self):
+        """Return the dispatch reference, batch number, and dispatched quantity."""
         return f"{self.dispatch.dispatch_reference} - {self.batch.batch_number} ({self.dispatched_bags} bags)"
 
 
@@ -67,9 +72,7 @@ class ASCStock(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-    # Business Rule 4: Each ASC can have only one stock record for each batch.
-    
-    # Business Rule 4: Each ASC can have only one stock record for each batch.
+        # Business Rule 4: Each ASC can have only one stock record for each batch.
         constraints = [
             models.UniqueConstraint(fields=['asc_centre', 'batch'], name='unique_asc_batch_stock')
         ]
@@ -77,11 +80,10 @@ class ASCStock(models.Model):
     @property
     def total_weight_kg(self):
         # Calculate the total weight in kilograms by multiplying the number of bags by the weight of one bag.
-        
-        # Calculate the total weight in kilograms by multiplying the number of bags by the weight of one bag.
         return self.bags_on_hand * self.batch.product.bag_weight_kg
 
     def __str__(self):
+        """Return the ASC, batch, and current bag balance."""
         return f"{self.asc_centre.name} | {self.batch.batch_number}: {self.bags_on_hand} bags"
 
 class StockMovement(models.Model):
@@ -99,4 +101,5 @@ class StockMovement(models.Model):
     created_at      = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        """Return the movement type, quantity, and ASC centre."""
         return f"{self.movement_type} - {self.quantity_kg} kg ({self.stock.asc_centre.name})"

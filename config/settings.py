@@ -33,6 +33,7 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = []
 
+DEMO_MODE = True
 
 # Application definition
 

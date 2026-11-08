@@ -1,57 +1,110 @@
-{% extends 'base.html' %}
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <div class="max-w-3xl mx-auto space-y-6">
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h1 class="text-2xl font-bold text-slate-800">Welcome, {{ farmer.full_name }}</h1>
-        <p class="text-sm text-slate-500">NIC: {{ farmer.nic_number }} | Mobile: {{ farmer.mobile_number }}</p>
+  <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+    <h1 class="text-2xl font-bold text-slate-800">
+      Welcome, {{ farmer.full_name }}
+    </h1>
+    <p class="text-sm text-slate-500">
+      NIC: {{ farmer.nic_number }} | Mobile: {{ farmer.mobile_number }}
+    </p>
+  </div>
+
+  <!-- Dynamic 60-Second QR Generation & Visual QR Code -->
+  <div
+    class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 text-center"
+  >
+    <h2 class="text-lg font-bold mb-2 text-emerald-800">
+      Dynamic 60-Second Secure QR Code
+    </h2>
+    <p class="text-sm text-slate-600 mb-4">
+      Click below to generate a secure, single-use cryptographic QR code valid
+      for 60 seconds (FR-10).
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-2.5 rounded shadow"
+      >
+        Generate Fresh QR Code
+      </button>
+    </form>
+
+    {% if raw_token %}
+    <div
+      class="mt-6 p-4 bg-slate-50 border rounded inline-flex flex-col items-center"
+    >
+      <p class="text-xs font-mono text-slate-500 mb-2">Scan Visual QR Code:</p>
+
+      <!-- Visual QR Code Container -->
+      <div id="qrcode" class="bg-white p-3 border rounded shadow-sm mb-3"></div>
+
+      <p class="text-xs font-mono text-slate-400 mb-1">Raw Token String:</p>
+      <code
+        class="bg-black text-emerald-400 p-2 rounded text-xs block font-mono select-all max-w-sm truncate"
+        >{{ raw_token }}</code
+      >
+      <p class="text-xs text-amber-600 mt-2 font-semibold">
+        ⚠️ Expires in 60 seconds. Do not share screenshots.
+      </p>
     </div>
 
-    <!-- Dynamic 60-Second QR Generation -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 text-center">
-        <h2 class="text-lg font-bold mb-2 text-emerald-800">Dynamic 60-Second Secure QR Token</h2>
-        <p class="text-sm text-slate-600 mb-4">Click below to generate a secure, single-use cryptographic token valid for 60 seconds (FR-10).</p>
-        
-        <form method="post">
-            {% csrf_token %}
-            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-2.5 rounded shadow">
-                Generate Fresh QR Token
-            </button>
-        </form>
+    <!-- QRCode.js CDN Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+      // Generate visual QR code from the raw token string
+      document.addEventListener("DOMContentLoaded", function () {
+        var rawToken = "{{ raw_token }}";
+        if (rawToken) {
+          document.getElementById("qrcode").innerHTML = ""; // Clear previous if any
+          new QRCode(document.getElementById("qrcode"), {
+            text: rawToken,
+            width: 180,
+            height: 180,
+            colorDark: "#065f46", // Emerald-800 color matching theme
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+          });
+        }
+      });
+    </script>
+    {% endif %}
+  </div>
 
-        {% if raw_token %}
-        <div class="mt-6 p-4 bg-slate-50 border rounded inline-block">
-            <p class="text-xs font-mono text-slate-500 mb-2">Raw Token String (Simulated QR Payload):</p>
-            <code class="bg-black text-emerald-400 p-2 rounded text-sm block font-mono select-all">{{ raw_token }}</code>
-            <p class="text-xs text-amber-600 mt-2 font-semibold">⚠️ Expires in 60 seconds. Do not share screenshots.</p>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Entitlements Table -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h2 class="text-lg font-bold mb-3 text-slate-800">My Seasonal Entitlements (Quotas)</h2>
-        <table class="w-full text-left border-collapse text-sm">
-            <thead>
-                <tr class="bg-slate-100 border-b">
-                    <th class="p-3">Season</th>
-                    <th class="p-3">Fertilizer</th>
-                    <th class="p-3">Approved Quota</th>
-                    <th class="p-3">Remaining Quota</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ent in entitlements %}
-                <tr class="border-b">
-                    <td class="p-3 font-medium">{{ ent.season.name }}</td>
-                    <td class="p-3">{{ ent.product.name }}</td>
-                    <td class="p-3">{{ ent.approved_kg }} kg</td>
-                    <td class="p-3 font-bold text-emerald-700">{{ ent.remaining_kg }} kg</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" class="p-4 text-center text-slate-500">No entitlements assigned for this season.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+  <!-- Entitlements Table -->
+  <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-3 text-slate-800">
+      My Seasonal Entitlements (Quotas)
+    </h2>
+    <table class="w-full text-left border-collapse text-sm">
+      <thead>
+        <tr class="bg-slate-100 border-b">
+          <th class="p-3">Season</th>
+          <th class="p-3">Fertilizer</th>
+          <th class="p-3">Approved Quota</th>
+          <th class="p-3">Remaining Quota</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ent in entitlements %}
+        <tr class="border-b">
+          <td class="p-3 font-medium">{{ ent.season.name }}</td>
+          <td class="p-3">{{ ent.product.name }}</td>
+          <td class="p-3">{{ ent.approved_kg }} kg</td>
+          <td class="p-3 font-bold text-emerald-700">
+            {{ ent.remaining_kg }} kg
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="p-4 text-center text-slate-500">
+            No entitlements assigned for this season.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
