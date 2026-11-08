@@ -5,6 +5,7 @@ from django.utils import timezone
 from farmers.models import QRToken, FarmerEntitlement
 from inventory.models import ASCStock, StockMovement
 from .models import FertilizerDistribution, AuditLog
+from core.models import Season
 
 @transaction.atomic
 def process_qr_distribution(raw_token_string, asc_officer_user, season_id, client_ip=None):
@@ -30,6 +31,13 @@ def process_qr_distribution(raw_token_string, asc_officer_user, season_id, clien
         asc_centre = asc_officer_user.asc_centre
     else:
         raise ValidationError("Only an officer from the relevant ASC can issue fertilizer.")
+
+    # Verify that fertilizer can only be issued during an active season.
+    season_obj = Season.objects.filter(id=season_id).first()
+    if not season_obj or season_obj.status != 'ACTIVE':
+        raise ValidationError(
+            "The selected season is not currently active. Fertilizer cannot be issued for a closed or expired season."
+        )
 
     # 3. Retrieve the farmer's entitlement for the selected season.
     try:

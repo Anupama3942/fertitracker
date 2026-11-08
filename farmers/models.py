@@ -11,6 +11,13 @@ class Farmer(models.Model):
     nic_number = models.CharField(max_length=20, unique=True)  # Business Rule 2: Each farmer NIC number must be unique.
     mobile_number = models.CharField(max_length=20)
     arpa_division = models.CharField(max_length=150, blank=True, null=True)  # Align with Sri Lanka's agricultural administration structure.
+    
+    @property
+    def masked_nic(self):
+        """Data Privacy: 198512345678 -> 1985****5678 ලෙස පෙන්වයි."""
+        if len(self.nic_number) >= 8:
+            return f"{self.nic_number[:4]}****{self.nic_number[-4:]}"
+        return self.nic_number
 
     def __str__(self):
         """Return the farmer's name and NIC number."""

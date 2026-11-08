@@ -9,4 +9,6 @@ urlpatterns = [
     path('activate/', views.activate_account_view, name='activate_account'),
     path('password/reset/', views.password_reset_request_view, name='password_reset_request'),
     path('password/reset/confirm/', views.password_reset_confirm_view, name='password_reset_confirm'),
+    path('password/force-change/', views.force_password_change_view, name='force_password_change'),
+    path('seasons/<int:season_id>/toggle/', views.toggle_season_status, name='toggle_season_status'),
 ]

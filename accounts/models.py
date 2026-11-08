@@ -25,6 +25,13 @@ class User(AbstractUser):
     
     # Track whether a farmer account has been activated through OTP verification.
     is_account_active = models.BooleanField(default=True)
+    
+    failed_login_attempts = models.IntegerField(default=0)
+    
+    locked_until = models.DateTimeField(null=True, blank=True)
+    
+    def is_locked(self):
+        return self.locked_until and timezone.now() < self.locked_until
 
     def __str__(self):
         """Return the username and display name of the user."""

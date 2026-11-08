@@ -1,67 +1,269 @@
 {% extends 'base.html' %} {% block content %}
-<div class="mb-6">
-  <h1 class="text-2xl font-bold text-slate-800">
-    Welcome, {{ user.username }}!
-  </h1>
-  <p class="text-slate-600">
-    Logged in as:
-    <span class="font-semibold text-emerald-700"
-      >{{ user.get_role_display }}</span
-    >
-  </p>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-    <p class="text-sm text-slate-500">Registered Warehouses</p>
-    <p class="text-2xl font-bold text-emerald-700">{{ warehouse_count }}</p>
-  </div>
-  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-    <p class="text-sm text-slate-500">Agrarian Service Centres (ASC)</p>
-    <p class="text-2xl font-bold text-emerald-700">{{ asc_count }}</p>
-  </div>
-  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-    <p class="text-sm text-slate-500">Active Seasons</p>
-    <p class="text-2xl font-bold text-emerald-700">
-      {{ active_seasons.count }}
-    </p>
-  </div>
-  <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-    <p class="text-sm text-slate-500">Fertilizer Products</p>
-    <p class="text-2xl font-bold text-emerald-700">{{ products.count }}</p>
-  </div>
-</div>
-
-<div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-  <h2 class="text-lg font-bold mb-3">
-    Role Workspace ({{ user.get_role_display }})
-  </h2>
-  {% if user.role == 'ADMIN' %}
-  <p class="text-sm text-slate-600 mb-4">
-    You can manage Warehouses, ASCs, Seasons, Fertilizer Products, and User
-    Accounts through the Admin Panel.
-  </p>
-  <a
-    href="/admin/"
-    class="inline-block bg-emerald-700 text-white px-4 py-2 rounded text-sm hover:bg-emerald-800"
-    >Open Admin Panel</a
+<div class="space-y-6">
+  <!-- Top Header & Active Season Banner -->
+  <div
+    class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-lg shadow-sm border border-slate-200"
   >
-  {% elif user.role == 'WAREHOUSE_OFFICER' %}
-  <p class="text-sm text-slate-600">
-    Warehouse Batch & Dispatch management page (to be connected in Iteration 3).
-  </p>
-  {% elif user.role == 'ASC_OFFICER' %}
-  <p class="text-sm text-slate-600">
-    Assigned ASC: <strong>{{ user.asc_centre|default:"Not Assigned" }}</strong>
-  </p>
-  {% elif user.role == 'FARMER' %}
-  <p class="text-sm text-slate-600">
-    Page for accessing your fertilizer entitlement and Dynamic QR code.
-  </p>
-  {% elif user.role == 'AUDITOR' %}
-  <p class="text-sm text-slate-600">
-    Page for reviewing audit logs and inspecting stock.
-  </p>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">
+        {{ user.get_role_display }} Dashboard
+      </h1>
+      <p class="text-sm text-slate-500">
+        {% if user.asc_centre %}Assigned Centre:
+        <strong>{{ user.asc_centre.name }}</strong> | {% endif %} Date: {{ today
+        }}
+      </p>
+    </div>
+    <div class="mt-3 md:mt-0 flex items-center gap-2">
+      <span class="text-xs font-semibold uppercase text-slate-500"
+        >Active Season:</span
+      >
+      {% for s in active_seasons %}
+      <span
+        class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold"
+        >{{ s.name }}</span
+      >
+      {% empty %}
+      <span
+        class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold"
+        >No Active Season (Issuance Locked)</span
+      >
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Critical Alerts: Expired, FEFO Near-Expiry & Low Stock -->
+  {% if expired_stocks or near_expiry_stocks or low_stocks %}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div
+      class="p-4 rounded-lg border {% if expired_stocks %}bg-red-50 border-red-300{% else %}bg-white border-slate-200{% endif %}"
+    >
+      <h3 class="text-sm font-bold text-red-800">
+        🚨 Expired Batches ({{ expired_stocks.count }})
+      </h3>
+      <p class="text-xs text-slate-600 mt-1">
+        Batches past expiry date. Do not issue to farmers.
+      </p>
+      {% for st in expired_stocks %}
+      <div
+        class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-red-200"
+      >
+        {{ st.batch.batch_number }} ({{ st.asc_centre.name }}) - {{
+        st.bags_on_hand }} bags
+      </div>
+      {% endfor %}
+    </div>
+
+    <div
+      class="p-4 rounded-lg border {% if near_expiry_stocks %}bg-amber-50 border-amber-300{% else %}bg-white border-slate-200{% endif %}"
+    >
+      <h3 class="text-sm font-bold text-amber-800">
+        ⚠️ FEFO Priority Alert ({{ near_expiry_stocks.count }})
+      </h3>
+      <p class="text-xs text-slate-600 mt-1">
+        Expiring within 30 days. Issue these batches first!
+      </p>
+      {% for st in near_expiry_stocks %}
+      <div
+        class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-amber-200"
+      >
+        {{ st.batch.batch_number }} (Exp: {{ st.batch.expiry_date }}) - {{
+        st.bags_on_hand }} bags
+      </div>
+      {% endfor %}
+    </div>
+
+    <div
+      class="p-4 rounded-lg border {% if low_stocks %}bg-orange-50 border-orange-300{% else %}bg-white border-slate-200{% endif %}"
+    >
+      <h3 class="text-sm font-bold text-orange-800">
+        📉 Low Stock Alert ({{ low_stocks.count }})
+      </h3>
+      <p class="text-xs text-slate-600 mt-1">
+        ASC stock balances below 10 bags threshold.
+      </p>
+      {% for st in low_stocks %}
+      <div
+        class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-orange-200"
+      >
+        {{ st.asc_centre.name }} | {{ st.batch.product.name }}:
+        <strong>{{ st.bags_on_hand }} bags left</strong>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ASC Officer & Admin View: Today's Fertilizer Issues + Quick Actions -->
+  {% if show_operations %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div
+      class="lg:col-span-2 bg-white p-5 rounded-lg shadow-sm border border-slate-200"
+    >
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-slate-800">
+          Today's Fertilizer Issues ({{ today_distributions.count }})
+        </h2>
+        <span
+          class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded text-xs font-bold"
+        >
+          Total Issued Today: {{ today_total_kg }} kg
+        </span>
+      </div>
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-100 border-b">
+            <th class="p-2.5">Receipt</th>
+            <th class="p-2.5">Farmer (Masked NIC)</th>
+            <th class="p-2.5">Batch</th>
+            <th class="p-2.5">Qty</th>
+            <th class="p-2.5">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dist in today_distributions %}
+          <tr class="border-b">
+            <td class="p-2.5 font-mono text-xs font-bold">
+              <a
+                href="{% url 'distribution_receipt' dist.receipt_number %}"
+                class="text-emerald-700 hover:underline"
+                >{{ dist.receipt_number }}</a
+              >
+            </td>
+            <td class="p-2.5">
+              {{ dist.farmer.full_name }}
+              <span class="text-xs text-slate-400"
+                >({{ dist.farmer.masked_nic }})</span
+              >
+            </td>
+            <td class="p-2.5 font-mono text-xs">
+              {{ dist.batch.batch_number }}
+            </td>
+            <td class="p-2.5 font-bold text-emerald-700">
+              {{ dist.quantity_kg }} kg
+            </td>
+            <td class="p-2.5 text-xs text-slate-500">
+              {{ dist.distributed_at|date:"H:i" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="p-4 text-center text-slate-500">
+              No fertilizer distributions recorded today yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Season Management Card (Admin) & Quick Links -->
+    <div
+      class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 space-y-4"
+    >
+      <h2 class="text-lg font-bold text-slate-800">
+        Season Management (Maha/Yala)
+      </h2>
+      <p class="text-xs text-slate-500">
+        Closing a season automatically blocks QR issuance for that season's
+        entitlements.
+      </p>
+      <div class="space-y-2">
+        {% for s in all_seasons %}
+        <div
+          class="flex justify-between items-center p-2.5 border rounded bg-slate-50"
+        >
+          <div>
+            <p class="text-sm font-bold">{{ s.name }}</p>
+            <span
+              class="text-[11px] px-2 py-0.5 rounded font-semibold {% if s.status == 'ACTIVE' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-200 text-slate-700{% endif %}"
+            >
+              {{ s.status }}
+            </span>
+          </div>
+          {% if user.role == 'ADMIN' or user.is_superuser %}
+          <form method="post" action="{% url 'toggle_season_status' s.id %}">
+            {% csrf_token %}
+            <button
+              type="submit"
+              class="text-xs px-3 py-1.5 rounded font-semibold {% if s.status == 'ACTIVE' %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-emerald-600 text-white hover:bg-emerald-700{% endif %}"
+            >
+              {{ s.status }} Season
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Auditor & Admin View: Discrepancies & Recent Audit Trail -->
+  {% if user.role == 'AUDITOR' or user.role == 'ADMIN' or user.is_superuser %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+      <h2 class="text-lg font-bold text-red-800 mb-3">
+        🚩 Dispatch Discrepancies ({{ discrepancy_dispatches.count }})
+      </h2>
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-100 border-b">
+            <th class="p-2">Ref</th>
+            <th class="p-2">ASC Centre</th>
+            <th class="p-2">Dispatched</th>
+            <th class="p-2">Good / Damaged</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in discrepancy_dispatches %}
+          <tr class="border-b">
+            <td class="p-2 font-mono text-xs font-bold">
+              {{ d.dispatch_reference }}
+            </td>
+            <td class="p-2">{{ d.asc_centre.name }}</td>
+            <td class="p-2">{{ d.dispatched_bags }} bags</td>
+            <td class="p-2 text-red-700 font-semibold">
+              {{ d.received_good_bags }} good / {{ d.damaged_bags }} dmg
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="p-4 text-center text-slate-500">
+              No dispatch discrepancies reported.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-bold text-slate-800">
+          Recent Security & Audit Logs
+        </h2>
+        <a
+          href="{% url 'audit_logs' %}"
+          class="text-xs text-emerald-700 hover:underline font-semibold"
+          >View All →</a
+        >
+      </div>
+      <div class="space-y-2">
+        {% for log in recent_logs %}
+        <div class="p-2 border-b text-xs font-mono flex justify-between">
+          <span
+            ><strong>{{ log.action }}</strong> ({{
+            log.user.username|default:"System" }})</span
+          >
+          <span class="text-slate-400"
+            >{{ log.timestamp|date:"M d, H:i" }}</span
+          >
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

@@ -35,6 +35,10 @@ ALLOWED_HOSTS = []
 
 DEMO_MODE = True
 
+SESSION_COOKIE_AGE = 900  # 900 seconds (15 miniutes)
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
 # Application definition
 
 INSTALLED_APPS = [
