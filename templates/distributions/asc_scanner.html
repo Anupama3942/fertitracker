@@ -1,0 +1,60 @@
+{% extends 'base.html' %} {% block content %}
+<div
+  class="max-w-xl mx-auto bg-white p-6 rounded-lg shadow-sm border border-slate-200"
+>
+  <h1 class="text-xl font-bold text-slate-800 mb-4">
+    ASC Officer: Scan Farmer QR & Issue Fertilizer
+  </h1>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-medium mb-1">Active Season</label>
+      <select name="season" required class="w-full border rounded px-3 py-2">
+        {% for s in seasons %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1"
+        >Scanned QR Token String</label
+      >
+      <textarea
+        name="token_string"
+        rows="3"
+        required
+        placeholder="Paste or scan raw token string here..."
+        class="w-full border rounded px-3 py-2 font-mono text-sm"
+      ></textarea>
+    </div>
+    <button
+      type="submit"
+      class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded"
+    >
+      Verify & Issue Fertilizer (Atomic)
+    </button>
+  </form>
+
+  {% if distribution %}
+  <div class="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded">
+    <h3 class="font-bold text-emerald-800 mb-1">Distribution Successful!</h3>
+    <p class="text-sm text-slate-700">
+      Receipt: <strong>{{ distribution.receipt_number }}</strong>
+    </p>
+    <p class="text-sm text-slate-700">
+      Farmer: {{ distribution.farmer.full_name }}
+    </p>
+    <p class="text-sm text-slate-700">
+      Issued Quantity: {{ distribution.quantity_kg }} kg
+    </p>
+    <a
+      href="{% url 'distribution_receipt' distribution.receipt_number %}"
+      target="_blank"
+      class="mt-3 inline-block bg-emerald-700 text-white text-xs px-3 py-1.5 rounded hover:bg-emerald-800"
+      >View Digital Receipt →</a
+    >
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
