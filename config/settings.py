@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     
     # Fertitracker APPs
     'core',
-    'accounts' 
+    'accounts',
+    'inventory'
 ]
 
 MIDDLEWARE = [

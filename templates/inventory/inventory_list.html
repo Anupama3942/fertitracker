@@ -1,0 +1,136 @@
+{% extends 'base.html' %} {% block content %}
+<div class="flex justify-between items-center mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">
+      Inventory, Batches & ASC Stock
+    </h1>
+    <p class="text-sm text-slate-500">
+      End-to-End Warehouse to ASC Stock Traceability (with FEFO Expiry Alerts)
+    </p>
+  </div>
+  {% if user.role == 'ADMIN' or user.role == 'WAREHOUSE_OFFICER' %}
+  <div class="flex gap-3">
+    <a
+      href="{% url 'create_batch' %}"
+      class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded text-sm font-medium"
+      >+ New Fertilizer Batch</a
+    >
+    <a
+      href="{% url 'create_dispatch' %}"
+      class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded text-sm font-medium"
+      >🚚 Create Dispatch</a
+    >
+  </div>
+  {% endif %}
+</div>
+
+<!-- ASC Stock Table (FEFO Ordered) -->
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5 mb-8">
+  <h2 class="text-lg font-bold mb-3 text-emerald-800">
+    Current ASC Stock Balances (FEFO Order)
+  </h2>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse text-sm">
+      <thead>
+        <tr class="bg-slate-100 border-b border-slate-200">
+          <th class="p-3">ASC Centre</th>
+          <th class="p-3">Batch No.</th>
+          <th class="p-3">Product</th>
+          <th class="p-3">Expiry Date (FEFO)</th>
+          <th class="p-3">Bags on Hand</th>
+          <th class="p-3">Total Weight (kg)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stock in stocks %}
+        <tr class="border-b border-slate-100">
+          <td class="p-3 font-medium">{{ stock.asc_centre.name }}</td>
+          <td class="p-3">{{ stock.batch.batch_number }}</td>
+          <td class="p-3">{{ stock.batch.product.name }}</td>
+          <td class="p-3">
+            {{ stock.batch.expiry_date }} {% if stock.expiry_label %}
+            <span
+              class="ml-2 px-2 py-0.5 rounded text-xs {{ stock.expiry_badge_class }}"
+              >{{ stock.expiry_label }}</span
+            >
+            {% endif %}
+          </td>
+          <td class="p-3 font-bold text-emerald-700">
+            {{ stock.bags_on_hand }}
+          </td>
+          <td class="p-3">{{ stock.total_weight_kg }} kg</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="p-4 text-center text-slate-500">
+            No confirmed ASC stock available yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Dispatches Table -->
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+  <h2 class="text-lg font-bold mb-3 text-slate-800">
+    Warehouse Dispatches to ASCs
+  </h2>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse text-sm">
+      <thead>
+        <tr class="bg-slate-100 border-b border-slate-200">
+          <th class="p-3">Dispatch Ref</th>
+          <th class="p-3">From Warehouse</th>
+          <th class="p-3">Destination ASC</th>
+          <th class="p-3">Date</th>
+          <th class="p-3">Status</th>
+          <th class="p-3">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in dispatches %}
+        <tr class="border-b border-slate-100">
+          <td class="p-3 font-mono font-bold">{{ d.dispatch_reference }}</td>
+          <td class="p-3">{{ d.warehouse.name }}</td>
+          <td class="p-3">{{ d.asc_centre.name }}</td>
+          <td class="p-3">{{ d.dispatched_at|date:"Y-m-d H:i" }}</td>
+          <td class="p-3">
+            {% if d.status == 'RECEIVED' %}
+            <span
+              class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs font-semibold"
+              >RECEIVED</span
+            >
+            {% elif d.status == 'DISCREPANCY' %}
+            <span
+              class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold"
+              >DISCREPANCY</span
+            >
+            {% else %}
+            <span
+              class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold"
+              >DISPATCHED</span
+            >
+            {% endif %}
+          </td>
+          <td class="p-3">
+            <a
+              href="{% url 'receive_dispatch' d.id %}"
+              class="text-emerald-700 hover:underline font-medium"
+              >View / Receive →</a
+            >
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="p-4 text-center text-slate-500">
+            No dispatches created yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -38,8 +38,8 @@
   </h2>
   {% if user.role == 'ADMIN' %}
   <p class="text-sm text-slate-600 mb-4">
-    ඔබට Admin Panel එක හරහා Warehouses, ASCs, Seasons, Fertilizer Products සහ
-    User Accounts කළමනාකරණය කළ හැක.
+    You can manage Warehouses, ASCs, Seasons, Fertilizer Products, and User
+    Accounts through the Admin Panel.
   </p>
   <a
     href="/admin/"
@@ -48,7 +48,7 @@
   >
   {% elif user.role == 'WAREHOUSE_OFFICER' %}
   <p class="text-sm text-slate-600">
-    Warehouse Batch & Dispatch කළමනාකරණ පිටුව (Iteration 3 හිදී සම්බන්ධ කෙරේ).
+    Warehouse Batch & Dispatch management page (to be connected in Iteration 3).
   </p>
   {% elif user.role == 'ASC_OFFICER' %}
   <p class="text-sm text-slate-600">
@@ -56,11 +56,11 @@
   </p>
   {% elif user.role == 'FARMER' %}
   <p class="text-sm text-slate-600">
-    ඔබේ පොහොර හිමිකම (Entitlement) සහ Dynamic QR කේතය ලබාගැනීමේ පිටුව.
+    Page for accessing your fertilizer entitlement and Dynamic QR code.
   </p>
   {% elif user.role == 'AUDITOR' %}
   <p class="text-sm text-slate-600">
-    විගණන වාර්තා (Audit Logs) සහ තොග පරීක්ෂා කිරීමේ පිටුව.
+    Page for reviewing audit logs and inspecting stock.
   </p>
   {% endif %}
 </div>

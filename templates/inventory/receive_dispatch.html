@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 max-w-4xl mx-auto">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6">
+        <div>
+            <span class="text-xs uppercase font-bold tracking-wider text-slate-400">Dispatch Manifest</span>
+            <h1 class="text-2xl font-mono font-bold text-slate-800">{{ dispatch.dispatch_reference }}</h1>
+            <p class="text-sm text-slate-600 mt-1">
+                From: <strong>{{ dispatch.warehouse.name }}</strong> → To: <strong>{{ dispatch.asc_centre.name }}</strong>
+            </p>
+            <p class="text-xs text-slate-500 mt-1">Dispatched at: {{ dispatch.dispatched_at }} | Status: <strong>{{ dispatch.get_status_display }}</strong></p>
+        </div>
+        <div class="mt-4 md:mt-0 text-center">
+            <img src="data:image/png;base64,{{ qr_base64 }}" alt="Dispatch QR" class="w-28 h-28 mx-auto border p-1 rounded">
+            <span class="text-xs font-mono text-slate-500">Dispatch QR (FR-06)</span>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <table class="w-full text-left border-collapse text-sm mb-6">
+            <thead>
+                <tr class="bg-slate-100 border-b">
+                    <th class="p-3">Batch & Product</th>
+                    <th class="p-3">Dispatched Bags</th>
+                    <th class="p-3">Good Received Bags</th>
+                    <th class="p-3">Damaged Bags</th>
+                    <th class="p-3">Missing Bags</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr class="border-b">
+                    <td class="p-3 font-medium">{{ item.batch.batch_number }} ({{ item.batch.product.name }})</td>
+                    <td class="p-3 font-bold">{{ item.dispatched_bags }}</td>
+                    <td class="p-3">
+                        {% if dispatch.status == 'DISPATCHED' %}
+                            <input type="number" name="received_{{ item.id }}" value="{{ item.dispatched_bags }}" min="0" max="{{ item.dispatched_bags }}" required class="border rounded px-2 py-1 w-24">
+                        {% else %}
+                            <span class="font-bold text-emerald-700">{{ item.received_bags }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-3">
+                        {% if dispatch.status == 'DISPATCHED' %}
+                            <input type="number" name="damaged_{{ item.id }}" value="0" min="0" max="{{ item.dispatched_bags }}" required class="border rounded px-2 py-1 w-24">
+                        {% else %}
+                            <span class="font-bold text-amber-700">{{ item.damaged_bags }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-3 font-bold text-red-600">
+                        {% if dispatch.status == 'DISPATCHED' %}-{% else %}{{ item.missing_bags }}{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if dispatch.status == 'DISPATCHED' and user.role in 'ADMIN,ASC_OFFICER' %}
+        <div class="flex justify-end">
+            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-2 rounded">
+                Confirm Receipt & Update ASC Stock (Atomic)
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

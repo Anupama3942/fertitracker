@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+    <h2 class="text-xl font-bold text-slate-800 mb-4">Create Warehouse Dispatch to ASC</h2>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="block text-sm font-medium mb-1">Origin Warehouse</label>
+            <select name="warehouse" required class="w-full border border-slate-300 rounded px-3 py-2">
+                {% for w in warehouses %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Destination ASC Centre</label>
+            <select name="asc_centre" required class="w-full border border-slate-300 rounded px-3 py-2">
+                {% for a in asc_centres %}<option value="{{ a.id }}">{{ a.name }} ({{ a.district }})</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Fertilizer Batch</label>
+            <select name="batch" required class="w-full border border-slate-300 rounded px-3 py-2">
+                {% for b in batches %}<option value="{{ b.id }}">{{ b.batch_number }} - {{ b.product.name }} (Exp: {{ b.expiry_date }})</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Dispatched Bags Quantity</label>
+            <input type="number" name="dispatched_bags" min="1" required class="w-full border border-slate-300 rounded px-3 py-2">
+        </div>
+        <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 rounded">Generate Dispatch & QR</button>
+    </form>
+</div>
+{% endblock %}

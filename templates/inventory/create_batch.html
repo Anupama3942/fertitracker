@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+    <h2 class="text-xl font-bold text-slate-800 mb-4">Create Fertilizer Batch</h2>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="block text-sm font-medium mb-1">Warehouse</label>
+            <select name="warehouse" required class="w-full border border-slate-300 rounded px-3 py-2">
+                {% for w in warehouses %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Fertilizer Product</label>
+            <select name="product" required class="w-full border border-slate-300 rounded px-3 py-2">
+                {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.bag_weight_kg }} kg)</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Unique Batch Number (e.g. BATCH-UREA-2026-01)</label>
+            <input type="text" name="batch_number" required class="w-full border border-slate-300 rounded px-3 py-2">
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Expiry Date</label>
+            <input type="date" name="expiry_date" required class="w-full border border-slate-300 rounded px-3 py-2">
+        </div>
+        <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 rounded">Save Batch</button>
+    </form>
+</div>
+{% endblock %}
