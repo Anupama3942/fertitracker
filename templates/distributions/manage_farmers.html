@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+        <h1 class="text-2xl font-bold text-slate-800">Farmer Registration, Bulk CSV Import & Phone Verification</h1>
+        <p class="text-sm text-slate-500">Controlled onboarding (FR-A3): Register verified farmers, upload bulk seasonal quotas via CSV, or update farmer mobile numbers after physical NIC verification.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 1. Bulk Entitlement CSV Import -->
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+            <h2 class="text-lg font-bold text-emerald-800 mb-2">📂 Bulk Entitlement Import (CSV)</h2>
+            <p class="text-xs text-slate-500 mb-3">
+                CSV Headers required:<br>
+                <code class="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px]">nic_number,full_name,mobile_number,arpa_division,approved_kg</code>
+            </p>
+            <form method="post" enctype="multipart/form-data" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="bulk_csv_import">
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Season</label>
+                    <select name="season" required class="w-full border rounded px-3 py-1.5 text-sm">
+                        {% for s in seasons %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Fertilizer Product</label>
+                    <select name="product" required class="w-full border rounded px-3 py-1.5 text-sm">
+                        {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Select CSV File</label>
+                    <input type="file" name="csv_file" accept=".csv" required class="w-full text-xs border rounded p-1.5">
+                </div>
+                <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 rounded text-sm">
+                    Upload & Import Quotas
+                </button>
+            </form>
+        </div>
+
+        <!-- 2. Single Farmer Registration (FR-A3) -->
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+            <h2 class="text-lg font-bold text-slate-800 mb-2">👤 Register Single Farmer (FR-A3)</h2>
+            <form method="post" class="space-y-2.5">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="register_single_farmer">
+                <input type="text" name="nic_number" required placeholder="NIC Number (Username)" class="w-full border rounded px-3 py-1.5 text-sm">
+                <input type="text" name="full_name" required placeholder="Full Name" class="w-full border rounded px-3 py-1.5 text-sm">
+                <input type="text" name="mobile_number" required placeholder="Mobile Number (for OTP)" class="w-full border rounded px-3 py-1.5 text-sm">
+                <input type="text" name="arpa_division" required placeholder="ARPA Division (e.g. Vavuniya South)" class="w-full border rounded px-3 py-1.5 text-sm">
+                <div class="grid grid-cols-2 gap-2">
+                    <select name="season" required class="border rounded px-2 py-1.5 text-sm">
+                        {% for s in seasons %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                    </select>
+                    <select name="product" required class="border rounded px-2 py-1.5 text-sm">
+                        {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <input type="number" step="0.01" name="approved_kg" value="100.00" required placeholder="Approved Quota (kg)" class="w-full border rounded px-3 py-1.5 text-sm">
+                <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2 rounded text-sm">
+                    Register Farmer & Assign Quota
+                </button>
+            </form>
+        </div>
+
+        <!-- 3. Secure Phone Number Change (Anti-Account Takeover) -->
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+            <h2 class="text-lg font-bold text-amber-800 mb-2">📱 Update Farmer Phone Number</h2>
+            <p class="text-xs text-slate-500 mb-3">Requires physical NIC inspection at the ASC office to prevent unauthorized OTP hijacking.</p>
+            <form method="post" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_phone">
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Verified Farmer NIC</label>
+                    <input type="text" name="nic_number" required placeholder="e.g. 198512345678" class="w-full border rounded px-3 py-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">New Mobile Number</label>
+                    <input type="text" name="new_mobile" required placeholder="e.g. 0719876543" class="w-full border rounded px-3 py-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Verification Note</label>
+                    <input type="text" name="reason" value="Physical NIC verified at ASC counter" required class="w-full border rounded px-3 py-1.5 text-sm">
+                </div>
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 rounded text-sm">
+                    Verify & Update Mobile Number
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registered Farmers List (with Masked NIC) -->
+    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-800 mb-3">Recently Registered Farmers (Data Privacy Masked)</h2>
+        <table class="w-full text-left border-collapse text-sm">
+            <thead>
+                <tr class="bg-slate-100 border-b">
+                    <th class="p-2.5">Full Name</th>
+                    <th class="p-2.5">Masked NIC</th>
+                    <th class="p-2.5">Mobile Number</th>
+                    <th class="p-2.5">ARPA Division</th>
+                    <th class="p-2.5">Account Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in farmers_list %}
+                <tr class="border-b">
+                    <td class="p-2.5 font-medium">{{ f.full_name }}</td>
+                    <td class="p-2.5 font-mono text-xs">{{ f.masked_nic }}</td>
+                    <td class="p-2.5 font-mono text-xs">{{ f.mobile_number }}</td>
+                    <td class="p-2.5">{{ f.arpa_division }}</td>
+                    <td class="p-2.5">
+                        {% if f.user and f.user.is_account_active %}
+                            <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-bold">Activated</span>
+                        {% else %}
+                            <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">Pending OTP Activation</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="p-4 text-center text-slate-500">No farmers registered yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -50,13 +50,28 @@
           <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
             >ASC Scanner</a
           >
+          <a
+            href="{% url 'manage_farmers' %}"
+            class="hover:underline font-medium"
+            >Farmers &amp; Bulk CSV</a
+          >
           {% else %} {% if user.role == 'ASC_OFFICER' %}
           <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
             >ASC Scanner</a
           >
+          <a
+            href="{% url 'manage_farmers' %}"
+            class="hover:underline font-medium"
+            >Farmers &amp; Bulk CSV</a
+          >
           {% else %} {% if user.is_superuser %}
           <a href="{% url 'asc_scanner' %}" class="hover:underline font-medium"
             >ASC Scanner</a
+          >
+          <a
+            href="{% url 'manage_farmers' %}"
+            class="hover:underline font-medium"
+            >Farmers &amp; Bulk CSV</a
           >
           {% endif %} {% endif %} {% endif %}
 

@@ -8,4 +8,5 @@ urlpatterns = [
     path('audit/logs/', views.audit_logs_view, name='audit_logs'),
     path('reports/', views.reports_and_search_view, name='reports_search'),
     path('reports/export-csv/', views.export_report_csv, name='export_report_csv'),
+    path('farmers/manage/', views.manage_farmers_and_bulk_import_view, name='manage_farmers'),
 ]
