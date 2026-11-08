@@ -24,6 +24,16 @@
             class="hover:underline font-medium"
             >Inventory & Dispatches</a
           >
+          <a
+            href="{% url 'inventory_list' %}"
+            class="hover:underline font-medium"
+            >Inventory & Dispatches</a
+          >
+          <a
+            href="{% url 'reports_search' %}"
+            class="hover:underline font-medium"
+            >Reports & Search</a
+          >
           {% endif %}
 
           <!-- 2. Show the farmer's QR and quota page only to farmers. -->

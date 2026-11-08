@@ -6,6 +6,11 @@ from core.models import Season
 from farmers.models import Farmer, QRToken
 from .models import FertilizerDistribution, AuditLog
 from .services import process_qr_distribution
+import csv
+from django.http import HttpResponse
+from django.db.models import Q
+import inventory.models as inv_models
+from inventory.models import ASCStock
 
 @role_required('FARMER')
 def farmer_qr_dashboard(request):
@@ -86,3 +91,141 @@ def audit_logs_view(request):
     """
     logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:100]
     return render(request, 'distributions/audit_logs.html', {'logs': logs})
+
+
+DispatchModel = (
+    getattr(inv_models, 'Dispatch', None)
+    or getattr(inv_models, 'WarehouseDispatch', None)
+    or getattr(inv_models, 'StockDispatch', None)
+    or getattr(inv_models, 'FertilizerDispatch', None)
+)
+
+@role_required('ADMIN', 'AUDITOR', 'ASC_OFFICER', 'WAREHOUSE_OFFICER')
+def reports_and_search_view(request):
+    """
+    Search & Filter (NIC, Batch No, Date) සහ Reports (Stock, Dispatch/Discrepancy, Distributions) පෙන්වන පිටුව.
+    """
+    q = request.GET.get('q', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+    report_type = request.GET.get('type', 'distributions')
+
+    distributions = FertilizerDistribution.objects.select_related(
+        'farmer', 'asc_centre', 'batch__product', 'season', 'issued_by'
+    ).order_by('-distributed_at')
+
+    stocks = ASCStock.objects.select_related(
+        'asc_centre', 'batch__product'
+    ).order_by('batch__expiry_date')
+
+    dispatches = DispatchModel.objects.select_related(
+        'warehouse', 'asc_centre', 'batch'
+    ).order_by('-dispatched_at') if DispatchModel else []
+
+    # ASC Officer හට තමන්ගේ ASC එකේ දත්ත පමණක් පෙන්වීම
+    if request.user.role == 'ASC_OFFICER' and request.user.asc_centre:
+        distributions = distributions.filter(asc_centre=request.user.asc_centre)
+        stocks = stocks.filter(asc_centre=request.user.asc_centre)
+        if DispatchModel:
+            dispatches = dispatches.filter(asc_centre=request.user.asc_centre)
+
+    # Search Query (NIC, Name, Receipt, Batch Number)
+    if q:
+        distributions = distributions.filter(
+            Q(farmer__nic_number__icontains=q) |
+            Q(farmer__full_name__icontains=q) |
+            Q(batch__batch_number__icontains=q) |
+            Q(receipt_number__icontains=q)
+        )
+        stocks = stocks.filter(
+            Q(batch__batch_number__icontains=q) |
+            Q(asc_centre__name__icontains=q) |
+            Q(batch__product__name__icontains=q)
+        )
+        if DispatchModel:
+            dispatches = dispatches.filter(
+                Q(dispatch_reference__icontains=q) |
+                Q(batch__batch_number__icontains=q) |
+                Q(asc_centre__name__icontains=q)
+            )
+
+    # Date Filter
+    if date_filter:
+        distributions = distributions.filter(distributed_at__date=date_filter)
+        if DispatchModel:
+            dispatches = dispatches.filter(dispatched_at__date=date_filter)
+
+    context = {
+        'q': q,
+        'date_filter': date_filter,
+        'report_type': report_type,
+        'distributions': distributions[:200],
+        'stocks': stocks,
+        'dispatches': dispatches,
+    }
+    return render(request, 'distributions/reports.html', context)
+
+
+@role_required('ADMIN', 'AUDITOR', 'ASC_OFFICER', 'WAREHOUSE_OFFICER')
+def export_report_csv(request):
+    """
+    තෝරාගත් වාර්තාව (Distributions, Stock, හෝ Dispatches) CSV ගොනුවක් ලෙස Download කිරීම.
+    """
+    report_type = request.GET.get('type', 'distributions')
+    q = request.GET.get('q', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="fertitracker_{report_type}_report.csv"'
+    writer = csv.writer(response)
+
+    if report_type == 'stocks':
+        writer.writerow(['ASC Centre', 'Product', 'Batch Number', 'Expiry Date', 'Bags on Hand'])
+        qs = ASCStock.objects.select_related('asc_centre', 'batch__product').order_by('batch__expiry_date')
+        if request.user.role == 'ASC_OFFICER' and request.user.asc_centre:
+            qs = qs.filter(asc_centre=request.user.asc_centre)
+        if q:
+            qs = qs.filter(Q(batch__batch_number__icontains=q) | Q(asc_centre__name__icontains=q))
+        for st in qs:
+            writer.writerow([st.asc_centre.name, st.batch.product.name, st.batch.batch_number, st.batch.expiry_date, st.bags_on_hand])
+
+    elif report_type == 'dispatches' and DispatchModel:
+        writer.writerow(['Reference', 'Warehouse', 'ASC Centre', 'Batch', 'Dispatched Bags', 'Good Bags', 'Damaged Bags', 'Status', 'Date'])
+        qs = DispatchModel.objects.select_related('warehouse', 'asc_centre', 'batch').order_by('-dispatched_at')
+        if request.user.role == 'ASC_OFFICER' and request.user.asc_centre:
+            qs = qs.filter(asc_centre=request.user.asc_centre)
+        if q:
+            qs = qs.filter(Q(dispatch_reference__icontains=q) | Q(batch__batch_number__icontains=q))
+        if date_filter:
+            qs = qs.filter(dispatched_at__date=date_filter)
+        for d in qs:
+            writer.writerow([
+                d.dispatch_reference, d.warehouse.name, d.asc_centre.name,
+                d.batch.batch_number, d.dispatched_bags, d.received_good_bags,
+                d.damaged_bags, d.status, d.dispatched_at.strftime('%Y-%m-%d %H:%M')
+            ])
+
+    else:
+        writer.writerow(['Receipt No', 'Farmer Name', 'Masked NIC', 'ASC Centre', 'Product', 'Batch No', 'Quantity (kg)', 'Season', 'Issued By', 'Date'])
+        qs = FertilizerDistribution.objects.select_related('farmer', 'asc_centre', 'batch__product', 'season', 'issued_by').order_by('-distributed_at')
+        if request.user.role == 'ASC_OFFICER' and request.user.asc_centre:
+            qs = qs.filter(asc_centre=request.user.asc_centre)
+        if q:
+            qs = qs.filter(Q(farmer__nic_number__icontains=q) | Q(batch__batch_number__icontains=q) | Q(receipt_number__icontains=q))
+        if date_filter:
+            qs = qs.filter(distributed_at__date=date_filter)
+        for dist in qs:
+            writer.writerow([
+                dist.receipt_number, dist.farmer.full_name, dist.farmer.masked_nic,
+                dist.asc_centre.name, dist.batch.product.name, dist.batch.batch_number,
+                dist.quantity_kg, dist.season.name, dist.issued_by.username,
+                dist.distributed_at.strftime('%Y-%m-%d %H:%M')
+            ])
+
+    AuditLog.objects.create(
+        user=request.user,
+        action=f"REPORT_EXPORTED_CSV",
+        details=f"Exported {report_type} report to CSV."
+    )
+    return response
+
+
