@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Header Card -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">🤝</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "Officer-Assisted Issue Request" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Two-Officer Authorization for farmers without mobile phones or QR codes." %}
+      </p>
+    </div>
+    <a
+      href="{% url 'farmer_search' %}"
+      class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-sm transition"
+    >
+      &larr; {% trans "Back" %}
+    </a>
+  </div>
+
+  <!-- Two-Officer Rule Explanatory Banner -->
+  <div class="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl flex items-start gap-3 text-amber-900 text-xs sm:text-sm">
+    <span class="text-2xl">⚠️</span>
+    <div>
+      <p class="font-bold">{% trans "Sri Lanka Agrarian Services Governance Notice (Two-Officer Rule):" %}</p>
+      <p class="mt-0.5">
+        {% trans "To prevent unauthorized stock leakage and protect paperless integrity, an assisted issue request created by a counter officer must be independently approved by the ASC Head before fertilizer can be handed over. Validity: 30 minutes." %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Farmer Summary Box -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+      👤 {% trans "Farmer Profile" %}
+    </h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl border border-slate-200">
+      <div>
+        <span class="text-xs text-slate-500 block">{% trans "Farmer Name" %}</span>
+        <span class="font-bold text-base text-slate-900">{{ farmer.full_name }}</span>
+      </div>
+      <div>
+        <span class="text-xs text-slate-500 block">{% trans "Masked NIC" %}</span>
+        <span class="font-mono font-bold text-base text-slate-900">{{ farmer.masked_nic }}</span>
+      </div>
+      <div>
+        <span class="text-xs text-slate-500 block">{% trans "Mobile Number" %}</span>
+        <span class="font-bold text-slate-800">{{ farmer.mobile_number|default:"None / Unregistered" }}</span>
+      </div>
+      <div>
+        <span class="text-xs text-slate-500 block">{% trans "Agrarian Service Centre" %}</span>
+        <span class="font-bold text-slate-800">{{ asc_centre.name }}</span>
+      </div>
+    </div>
+
+    <!-- Request Form -->
+    <form method="post" class="space-y-5 pt-2">
+      {% csrf_token %}
+
+      <!-- Season Field -->
+      <div>
+        <label class="block text-sm font-bold text-slate-800 mb-1.5">
+          {% trans "Select Active Season" %} *
+        </label>
+        <select
+          name="season"
+          required
+          class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+        >
+          {% for s in seasons %}
+          <option value="{{ s.id }}">{{ s.name }} ({% trans "Active" %})</option>
+          {% empty %}
+          <option value="" disabled>{% trans "No active season available" %}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Mandatory Reason Dropdown -->
+      <div>
+        <label class="block text-sm font-bold text-slate-800 mb-1.5">
+          {% trans "Mandatory Reason for Assisted Issue" %} *
+        </label>
+        <select
+          name="reason"
+          id="reason-select"
+          required
+          onchange="toggleReasonNote(this.value)"
+          class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+        >
+          <option value="" disabled selected>{% trans "Select official reason..." %}</option>
+          {% for code, label in reasons %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Mandatory explanation note when OTHER is chosen -->
+      <div id="reason-note-container">
+        <label class="block text-sm font-bold text-slate-800 mb-1.5">
+          <span id="note-label">{% trans "Explanatory Note / Officer Justification" %}</span>
+          <span id="note-required-star" class="text-rose-600 font-bold hidden">* ({% trans "Mandatory for 'Other'" %})</span>
+        </label>
+        <textarea
+          name="reason_note"
+          id="reason-note"
+          rows="3"
+          placeholder="{% trans "Provide relevant context, e.g. farmer's phone battery died, NIC verified via physical card..." %}"
+          class="w-full border-2 border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+        ></textarea>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="pt-2">
+        <button
+          type="submit"
+          class="touch-target w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3.5 px-6 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-base"
+        >
+          <span>📨</span>
+          <span>{% trans "Submit for ASC Head Approval (30 min)" %}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  function toggleReasonNote(val) {
+    const star = document.getElementById('note-required-star');
+    const textarea = document.getElementById('reason-note');
+    if (val === 'OTHER') {
+      star.classList.remove('hidden');
+      textarea.required = true;
+      textarea.placeholder = "{% trans "MANDATORY: Explain why an assisted issue is requested..." %}";
+    } else {
+      star.classList.add('hidden');
+      textarea.required = false;
+      textarea.placeholder = "{% trans "Optional explanatory notes..." %}";
+    }
+  }
+</script>
+{% endblock %}

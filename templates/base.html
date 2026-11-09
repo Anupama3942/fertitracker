@@ -25,6 +25,14 @@
   </head>
   <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased">
     
+    <!-- Global Demo Mode Banner -->
+    {% if DEMO_MODE %}
+    <div class="bg-amber-400 text-amber-950 text-xs py-1 px-4 font-bold text-center border-b border-amber-500 shadow-sm print:hidden flex flex-wrap items-center justify-center gap-2">
+      <span>⚠️ <strong>{% trans "DEMO PROTOTYPE MODE" %}</strong> &bull; {% trans "TICT3153 Project (University of Vavuniya / ICT Expo 5.0). SMS simulated." %}</span>
+      <a href="{% url 'demo_sms_inbox' %}" class="underline text-amber-900 hover:text-black">💬 {% trans "View Simulated SMS Inbox" %}</a>
+    </div>
+    {% endif %}
+
     <!-- Top Government Utility Bar -->
     <header class="bg-emerald-900 text-emerald-100 text-xs py-1.5 px-4 border-b border-emerald-800">
       <div class="max-w-7xl mx-auto flex justify-between items-center">
@@ -107,6 +115,18 @@
             📷 {% trans "QR Scanner" %}
           </a>
           <a
+            href="{% url 'farmer_search' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition flex items-center gap-1"
+          >
+            🔍 {% trans "Find Farmer" %}
+          </a>
+          <a
+            href="{% url 'pending_assisted_requests' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition flex items-center gap-1"
+          >
+            📝 {% trans "Assisted" %}
+          </a>
+          <a
             href="{% url 'manage_farmers' %}"
             class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition"
           >
@@ -133,12 +153,28 @@
           <!-- Auditor navigation -->
           {% if user.role == 'AUDITOR' or user.role == 'ADMIN' or user.is_superuser %}
           <a
+            href="{% url 'assisted_issues_report' %}"
+            class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition flex items-center gap-1"
+          >
+            📋 {% trans "Assisted Report" %}
+          </a>
+          <a
             href="{% url 'audit_logs' %}"
             class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition"
           >
             🛡️ {% trans "Audit Logs" %}
           </a>
           {% endif %}
+
+          <!-- Demo SMS Inbox Link (Visible when DEMO_MODE) -->
+          <a
+            href="{% url 'demo_sms_inbox' %}"
+            class="bg-amber-400/30 hover:bg-amber-400/50 text-amber-200 border border-amber-400/50 px-2.5 py-1.5 rounded-lg text-xs font-mono transition flex items-center gap-1"
+            title="Demo Simulated SMS Inbox"
+          >
+            💬 SMS Inbox
+          </a>
+
 
           <!-- Django Admin shortcut for admins -->
           {% if user.role == 'ADMIN' or user.is_superuser %}

@@ -81,56 +81,133 @@ def dashboard_view(request):
         return redirect('farmer_dashboard')
 
     today = timezone.now().date()
-    near_expiry_date = today + timedelta(days=30)
+    is_asc_head = getattr(user, 'is_asc_head', False) or user.role == 'ADMIN' or user.is_superuser
     active_seasons = Season.objects.filter(status='ACTIVE')
-    all_seasons = Season.objects.all().order_by('-id')
+    open_season = active_seasons.first()
 
-    # Role අනුව Stocks සහ Distributions පෙරීම (Filter)
+    # Alerts using stock alerts service (near-expiry 60 days, low stock per threshold, expired)
+    from inventory.services import get_stock_alerts
+    from inventory.models import Discrepancy, FertilizerBatch
+    from distributions.models import AssistedIssueApproval
+
+    asc_filter = user.asc_centre if user.role == 'ASC_OFFICER' and user.asc_centre else None
+    stock_alerts = get_stock_alerts(asc_centre=asc_filter)
+    expired_stocks = stock_alerts['expired_stocks']
+    near_expiry_stocks = stock_alerts['near_expiry_stocks']
+    low_stocks = stock_alerts['low_stocks']
+
+    # Stocks QuerySet
     stocks_qs = ASCStock.objects.select_related('asc_centre', 'batch__product').order_by('batch__expiry_date')
-    dist_qs = FertilizerDistribution.objects.select_related('farmer', 'asc_centre', 'batch__product')
+    if asc_filter:
+        stocks_qs = stocks_qs.filter(asc_centre=asc_filter)
 
-    if user.role == 'ASC_OFFICER' and user.asc_centre:
-        stocks_qs = stocks_qs.filter(asc_centre=user.asc_centre)
-        dist_qs = dist_qs.filter(asc_centre=user.asc_centre)
+    for st in stocks_qs:
+        if st.batch.expiry_date < today:
+            st.alert_badge = 'EXPIRED'
+            st.badge_color = 'bg-rose-100 text-rose-800 border-rose-300'
+        elif st.batch.expiry_date <= stock_alerts['near_expiry_date']:
+            st.alert_badge = 'NEAR EXPIRY'
+            st.badge_color = 'bg-amber-100 text-amber-800 border-amber-300'
+        elif st.bags_on_hand < getattr(settings, 'LOW_STOCK_THRESHOLD_BAGS', 10):
+            st.alert_badge = 'LOW STOCK'
+            st.badge_color = 'bg-orange-100 text-orange-800 border-orange-300'
+        else:
+            st.alert_badge = 'HEALTHY'
+            st.badge_color = 'bg-emerald-100 text-emerald-800 border-emerald-300'
 
-    # Alerts ගණනය කිරීම (Low Stock < 10 bags, Expired & Near-Expiry FEFO)
-    low_stocks = stocks_qs.filter(bags_on_hand__lt=10)
-    expired_stocks = stocks_qs.filter(batch__expiry_date__lt=today, bags_on_hand__gt=0)
-    near_expiry_stocks = stocks_qs.filter(batch__expiry_date__gte=today, batch__expiry_date__lte=near_expiry_date, bags_on_hand__gt=0)
-
-    # අද දින නිකුත් කිරීම් (Today's Issues)
-    today_distributions = dist_qs.filter(distributed_at__date=today).order_by('-distributed_at')
-    today_total_kg = today_distributions.aggregate(total=Sum('quantity_kg'))['total'] or 0
-
-    # Auditor සහ Admin සඳහා Discrepancy Dispatches සහ Audit Logs
-    discrepancy_dispatches = (
-        StockDispatch.objects.filter(status=StockDispatch.StatusChoices.DISCREPANCY)
-        .select_related('warehouse', 'asc_centre')
-        .annotate(
-            dispatched_bags=Sum('items__dispatched_bags'),
-            received_good_bags=Sum('items__received_bags'),
-            damaged_bags=Sum('items__damaged_bags'),
-        )
-        .order_by('-dispatched_at')
-    )
-    recent_logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:8]
-
+    # Role-specific Data Preparation
     context = {
         'today': today,
-        'show_operations': user.role in ['ASC_OFFICER', 'ADMIN'] or user.is_superuser,
+        'user': user,
+        'is_asc_head': is_asc_head,
         'active_seasons': active_seasons,
-        'all_seasons': all_seasons,
+        'open_season': open_season,
         'stocks': stocks_qs,
-        'low_stocks': low_stocks,
         'expired_stocks': expired_stocks,
         'near_expiry_stocks': near_expiry_stocks,
-        'today_distributions': today_distributions,
-        'today_total_kg': today_total_kg,
-        'discrepancy_dispatches': discrepancy_dispatches,
-        'recent_logs': recent_logs,
-        'total_farmers': Farmer.objects.count(),
-        'total_dispatches': StockDispatch.objects.count(),
+        'low_stocks': low_stocks,
     }
+
+    # 1. ASC OFFICER & ASC HEAD Context
+    if user.role in ['ASC_OFFICER', 'ADMIN'] or user.is_superuser:
+        dist_qs = FertilizerDistribution.objects.select_related('farmer', 'asc_centre', 'batch__product')
+        if asc_filter:
+            dist_qs = dist_qs.filter(asc_centre=asc_filter)
+        today_distributions = dist_qs.filter(distributed_at__date=today).order_by('-distributed_at')
+        today_total_kg = today_distributions.aggregate(total=Sum('quantity_kg'))['total'] or 0
+
+        incoming_dispatches = StockDispatch.objects.filter(
+            status=StockDispatch.StatusChoices.DISPATCHED
+        ).select_related('warehouse', 'asc_centre')
+        if asc_filter:
+            incoming_dispatches = incoming_dispatches.filter(asc_centre=asc_filter)
+
+        pending_assisted_qs = AssistedIssueApproval.objects.filter(
+            status=AssistedIssueApproval.StatusChoices.PENDING,
+            expires_at__gt=timezone.now()
+        ).select_related('farmer', 'asc_centre', 'requested_by')
+        if asc_filter:
+            pending_assisted_qs = pending_assisted_qs.filter(asc_centre=asc_filter)
+
+        context.update({
+            'today_distributions': today_distributions[:25],
+            'today_total_kg': today_total_kg,
+            'today_issue_count': today_distributions.count(),
+            'incoming_dispatches': incoming_dispatches.order_by('-dispatched_at')[:10],
+            'incoming_count': incoming_dispatches.count(),
+            'pending_assisted_requests': pending_assisted_qs[:10],
+            'pending_assisted_count': pending_assisted_qs.count(),
+        })
+
+    # 2. WAREHOUSE OFFICER Context
+    if user.role in ['WAREHOUSE_OFFICER', 'ADMIN'] or user.is_superuser:
+        wh_dispatches = StockDispatch.objects.select_related('warehouse', 'asc_centre', 'created_by').order_by('-dispatched_at')
+        if getattr(user, 'warehouse', None) and user.role == 'WAREHOUSE_OFFICER':
+            wh_dispatches = wh_dispatches.filter(warehouse=user.warehouse)
+
+        wh_batches = FertilizerBatch.objects.select_related('warehouse', 'product').order_by('expiry_date')
+        if getattr(user, 'warehouse', None) and user.role == 'WAREHOUSE_OFFICER':
+            wh_batches = wh_batches.filter(warehouse=user.warehouse)
+
+        context.update({
+            'wh_dispatches': wh_dispatches[:15],
+            'wh_batches': wh_batches[:15],
+            'dispatched_count': wh_dispatches.filter(status=StockDispatch.StatusChoices.DISPATCHED).count(),
+            'received_count': wh_dispatches.filter(status=StockDispatch.StatusChoices.RECEIVED).count(),
+            'discrepancy_count': wh_dispatches.filter(status=StockDispatch.StatusChoices.RECEIVED_WITH_DISCREPANCY).count(),
+        })
+
+    # 3. ADMINISTRATOR Context
+    if user.role == 'ADMIN' or user.is_superuser:
+        all_seasons = Season.objects.all().order_by('-id')
+        context.update({
+            'total_users': User.objects.count(),
+            'total_farmers': Farmer.objects.count(),
+            'total_ascs': ASCCentre.objects.count(),
+            'total_warehouses': Warehouse.objects.count(),
+            'all_seasons': all_seasons,
+        })
+
+    # 4. AUDITOR Context
+    if user.role in ['AUDITOR', 'ADMIN'] or user.is_superuser:
+        total_issues = FertilizerDistribution.objects.count()
+        assisted_issues = FertilizerDistribution.objects.filter(issue_method=FertilizerDistribution.IssueMethodChoices.ASSISTED).count()
+        assisted_pct = round((assisted_issues / total_issues * 100), 1) if total_issues > 0 else 0
+
+        discrepancies_list = Discrepancy.objects.select_related(
+            'dispatch__asc_centre', 'dispatch__warehouse', 'recorded_by'
+        ).order_by('-created_at')[:10]
+
+        context.update({
+            'total_issues': total_issues,
+            'assisted_issues_count': assisted_issues,
+            'assisted_pct': assisted_pct,
+            'discrepancy_records': discrepancies_list,
+            'total_discrepancies': Discrepancy.objects.count(),
+            'expired_stock_count': len(stock_alerts['expired_stocks']),
+            'recent_logs': AuditLog.objects.select_related('user').order_by('-timestamp')[:12],
+        })
+
     return render(request, 'accounts/dashboard.html', context)
 
 

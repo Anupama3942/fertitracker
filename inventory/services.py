@@ -138,3 +138,126 @@ def confirm_dispatch_receiving(dispatch_id, officer_user, received_bags_dict, da
     )
 
     return dispatch
+
+
+@transaction.atomic
+def write_off_expired_stock(stock_id, head_user, reason, bags_to_write_off=None):
+    """
+    Expired Stock Write-Off Action (ASC Head only):
+    Instead of deleting records, marks stock as written off via an append-only
+    StockMovement (type=WRITE_OFF) and writes an immutable AuditLog record.
+    Enforces:
+    - Authorizer must be ASC Head (is_asc_head=True or Admin).
+    - Authorizer must belong to the stock's ASC Centre.
+    - Batch MUST be past expiry date (today > batch.expiry_date).
+    - Mandatory non-empty reason.
+    """
+    from django.utils import timezone
+    from datetime import date
+    from .models import ASCStock, StockMovement
+
+    stock = ASCStock.objects.select_for_update().get(id=stock_id)
+
+    # 1. Permission check: ASC Head or Admin
+    is_head = getattr(head_user, 'is_asc_head', False) or head_user.role == 'ADMIN' or head_user.is_superuser
+    if not is_head:
+        raise ValidationError("Only an authorized ASC Head or Administrator can write off expired stock.")
+
+    # 2. Centre check
+    if head_user.role != 'ADMIN' and not head_user.is_superuser:
+        if head_user.asc_centre != stock.asc_centre:
+            raise ValidationError("You can only write off stock for your assigned Agrarian Service Centre.")
+
+    # 3. Expiry check: Must be expired
+    today = timezone.now().date()
+    if stock.batch.expiry_date >= today:
+        raise ValidationError(f"Batch {stock.batch.batch_number} has not expired yet (Expiry: {stock.batch.expiry_date}). Only expired batches can be written off.")
+
+    # 4. Reason check
+    clean_reason = (reason or "").strip()
+    if not clean_reason:
+        raise ValidationError("A mandatory justification reason must be provided for writing off expired fertilizer.")
+
+    # 5. Quantity deduction
+    write_off_count = int(bags_to_write_off) if bags_to_write_off is not None else stock.bags_on_hand
+    if write_off_count <= 0:
+        raise ValidationError("Write-off quantity must be greater than zero.")
+    if write_off_count > stock.bags_on_hand:
+        raise ValidationError(f"Cannot write off {write_off_count} bags. Available bags on hand: {stock.bags_on_hand}.")
+
+    bag_weight = stock.batch.product.bag_weight_kg
+    quantity_kg = Decimal(write_off_count) * bag_weight
+
+    stock.bags_on_hand -= write_off_count
+    stock.save()
+
+    movement = StockMovement.objects.create(
+        stock=stock,
+        movement_type=StockMovement.MovementTypeChoices.WRITE_OFF,
+        quantity_kg=quantity_kg,
+        created_by=head_user,
+        notes=f"Expired Stock Write-Off: {write_off_count} bags ({quantity_kg}kg). Reason: {clean_reason}"
+    )
+
+    AuditLog.objects.create(
+        user=head_user,
+        action=f"STOCK_WRITE_OFF: {stock.batch.batch_number}",
+        details=f"Wrote off {write_off_count} bags ({quantity_kg}kg) at {stock.asc_centre.name}. Reason: {clean_reason}"
+    )
+
+    return movement
+
+
+def get_stock_alerts(asc_centre=None):
+    """
+    Calculate stock alert metrics for dashboard and reports:
+    - Low stock (< threshold bags, customizable per ASC or setting)
+    - Near-expiry stock (within NEAR_EXPIRY_DAYS, default 60)
+    - Expired stock (past expiry date with bags_on_hand > 0)
+    """
+    from datetime import date, timedelta
+    from django.conf import settings
+    from .models import ASCStock, StockThreshold
+
+    today = date.today()
+    near_expiry_window_days = getattr(settings, 'NEAR_EXPIRY_DAYS', 60)
+    default_low_threshold = getattr(settings, 'LOW_STOCK_THRESHOLD_BAGS', 10)
+    near_expiry_date = today + timedelta(days=near_expiry_window_days)
+
+    stocks_qs = ASCStock.objects.select_related('asc_centre', 'batch__product').order_by('batch__expiry_date')
+    if asc_centre:
+        stocks_qs = stocks_qs.filter(asc_centre=asc_centre)
+
+    expired_stocks = []
+    near_expiry_stocks = []
+    low_stocks = []
+
+    # Map custom thresholds per (asc_id, product_id)
+    threshold_map = {
+        (t.asc_centre_id, t.product_id): t.threshold_bags
+        for t in StockThreshold.objects.all()
+    }
+
+    for stock in stocks_qs:
+        # Check expired
+        if stock.batch.expiry_date < today:
+            if stock.bags_on_hand > 0:
+                expired_stocks.append(stock)
+        # Check near-expiry
+        elif stock.batch.expiry_date <= near_expiry_date:
+            if stock.bags_on_hand > 0:
+                near_expiry_stocks.append(stock)
+
+        # Check low stock threshold
+        threshold = threshold_map.get((stock.asc_centre_id, stock.batch.product_id), default_low_threshold)
+        if stock.bags_on_hand < threshold:
+            stock.threshold_applied = threshold
+            low_stocks.append(stock)
+
+    return {
+        'expired_stocks': expired_stocks,
+        'near_expiry_stocks': near_expiry_stocks,
+        'low_stocks': low_stocks,
+        'today': today,
+        'near_expiry_date': near_expiry_date,
+    }

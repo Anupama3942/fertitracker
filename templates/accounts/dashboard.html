@@ -1,258 +1,611 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
 <div class="space-y-6">
-  <!-- Top Header & Active Season Banner -->
-  <div
-    class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-lg shadow-sm border border-slate-200"
-  >
+
+  <!-- Universal Header & Active Season Banner -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-slate-800">
-        {{ user.get_role_display }} Dashboard
-      </h1>
-      <p class="text-sm text-slate-500">
-        {% if user.asc_centre %}Assigned Centre:
-        <strong>{{ user.asc_centre.name }}</strong> | {% endif %} Date: {{ today
-        }}
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">
+          {% if user.role == 'ASC_OFFICER' %}🌾
+          {% elif user.role == 'WAREHOUSE_OFFICER' %}🏭
+          {% elif user.role == 'AUDITOR' %}🛡️
+          {% elif user.role == 'ADMIN' %}⚙️
+          {% else %}🌱{% endif %}
+        </span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {{ user.get_role_display }} {% trans "Dashboard" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% if user.asc_centre %}
+          {% trans "Assigned Agrarian Service Centre:" %} <strong class="text-emerald-800">{{ user.asc_centre.name }}</strong>
+        {% elif user.warehouse %}
+          {% trans "Assigned Warehouse:" %} <strong class="text-emerald-800">{{ user.warehouse.name }}</strong>
+        {% else %}
+          {% trans "National System Oversight" %}
+        {% endif %}
+        &bull; {% trans "Date:" %} {{ today }}
       </p>
     </div>
-    <div class="mt-3 md:mt-0 flex items-center gap-2">
-      <span class="text-xs font-semibold uppercase text-slate-500"
-        >Active Season:</span
-      >
-      {% for s in active_seasons %}
-      <span
-        class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold"
-        >{{ s.name }}</span
-      >
-      {% empty %}
-      <span
-        class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold"
-        >No Active Season (Issuance Locked)</span
-      >
-      {% endfor %}
+
+    <!-- Active Season Indicator -->
+    <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl">
+      <span class="text-xs font-bold uppercase text-slate-500">{% trans "Active Season:" %}</span>
+      {% if open_season %}
+      <span class="bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-1 rounded-full text-xs font-black">
+        🌱 {{ open_season.name }}
+      </span>
+      {% else %}
+      <span class="bg-rose-100 text-rose-800 border border-rose-300 px-3 py-1 rounded-full text-xs font-bold">
+        🔒 {% trans "No Active Season (Issuance Locked)" %}
+      </span>
+      {% endif %}
     </div>
   </div>
 
-  <!-- Critical Alerts: Expired, FEFO Near-Expiry & Low Stock -->
+  <!-- Global Alerts (Expired, FEFO Priority, Low Stock) -->
   {% if expired_stocks or near_expiry_stocks or low_stocks %}
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div
-      class="p-4 rounded-lg border {% if expired_stocks %}bg-red-50 border-red-300{% else %}bg-white border-slate-200{% endif %}"
-    >
-      <h3 class="text-sm font-bold text-red-800">
-        🚨 Expired Batches ({{ expired_stocks.count }})
-      </h3>
-      <p class="text-xs text-slate-600 mt-1">
-        Batches past expiry date. Do not issue to farmers.
-      </p>
-      {% for st in expired_stocks %}
-      <div class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-red-200">
-        {{ st.batch.batch_number }} ({{ st.asc_centre.name }}) - {{ st.bags_on_hand }} bags
+    {% if expired_stocks %}
+    <div class="bg-rose-50 border-2 border-rose-300 p-4 rounded-2xl shadow-sm">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-sm font-black text-rose-900">🚨 {% trans "Expired Stock Alert" %}</h3>
+        <span class="bg-rose-200 text-rose-900 font-mono text-xs font-bold px-2 py-0.5 rounded-full">{{ expired_stocks|length }}</span>
       </div>
-      {% endfor %}
-    </div>
-
-    <div
-      class="p-4 rounded-lg border {% if near_expiry_stocks %}bg-amber-50 border-amber-300{% else %}bg-white border-slate-200{% endif %}"
-    >
-      <h3 class="text-sm font-bold text-amber-800">
-        ⚠️ FEFO Priority Alert ({{ near_expiry_stocks.count }})
-      </h3>
-      <p class="text-xs text-slate-600 mt-1">
-        Expiring within 30 days. Issue these batches first!
-      </p>
-      {% for st in near_expiry_stocks %}
-      <div class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-amber-200">
-        {{ st.batch.batch_number }} (Exp: {{ st.batch.expiry_date }}) - {{ st.bags_on_hand }} bags
+      <p class="text-xs text-rose-800 mb-2">{% trans "Past expiry date. Issues from these batches are strictly blocked." %}</p>
+      <div class="space-y-1.5 max-h-32 overflow-y-auto">
+        {% for st in expired_stocks %}
+        <div class="text-xs font-mono bg-white p-2 rounded-lg border border-rose-200 flex justify-between items-center">
+          <span><strong>{{ st.batch.batch_number }}</strong> ({{ st.asc_centre.name }})</span>
+          <span class="text-rose-700 font-bold">{{ st.bags_on_hand }} {% trans "bags" %}</span>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
     </div>
+    {% endif %}
 
-    <div
-      class="p-4 rounded-lg border {% if low_stocks %}bg-orange-50 border-orange-300{% else %}bg-white border-slate-200{% endif %}"
-    >
-      <h3 class="text-sm font-bold text-orange-800">
-        📉 Low Stock Alert ({{ low_stocks.count }})
-      </h3>
-      <p class="text-xs text-slate-600 mt-1">
-        ASC stock balances below 10 bags threshold.
-      </p>
-      {% for st in low_stocks %}
-      <div
-        class="mt-2 text-xs font-mono bg-white p-1.5 rounded border border-orange-200"
+    {% if near_expiry_stocks %}
+    <div class="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl shadow-sm">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-sm font-black text-amber-900">⚠️ {% trans "FEFO Near-Expiry Alert" %}</h3>
+        <span class="bg-amber-200 text-amber-900 font-mono text-xs font-bold px-2 py-0.5 rounded-full">{{ near_expiry_stocks|length }}</span>
+      </div>
+      <p class="text-xs text-amber-800 mb-2">{% trans "Expiring within 60 days. System will allocate from these first (FEFO)." %}</p>
+      <div class="space-y-1.5 max-h-32 overflow-y-auto">
+        {% for st in near_expiry_stocks %}
+        <div class="text-xs font-mono bg-white p-2 rounded-lg border border-amber-200 flex justify-between items-center">
+          <span><strong>{{ st.batch.batch_number }}</strong> (Exp: {{ st.batch.expiry_date }})</span>
+          <span class="text-amber-800 font-bold">{{ st.bags_on_hand }} {% trans "bags" %}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if low_stocks %}
+    <div class="bg-orange-50 border-2 border-orange-300 p-4 rounded-2xl shadow-sm">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-sm font-black text-orange-900">📉 {% trans "Low Stock Threshold" %}</h3>
+        <span class="bg-orange-200 text-orange-900 font-mono text-xs font-bold px-2 py-0.5 rounded-full">{{ low_stocks|length }}</span>
+      </div>
+      <p class="text-xs text-orange-800 mb-2">{% trans "Bags on hand are below the minimum threshold." %}</p>
+      <div class="space-y-1.5 max-h-32 overflow-y-auto">
+        {% for st in low_stocks %}
+        <div class="text-xs font-mono bg-white p-2 rounded-lg border border-orange-200 flex justify-between items-center">
+          <span>{{ st.asc_centre.name }} | {{ st.batch.product.name }}</span>
+          <span class="text-orange-900 font-black">{{ st.bags_on_hand }} {% trans "bags" %}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ========================================================================= -->
+  <!-- 1. ASC OFFICER & ASC HEAD SECTION                                         -->
+  <!-- ========================================================================= -->
+  {% if user.role == 'ASC_OFFICER' or user.role == 'ADMIN' or user.is_superuser %}
+  <div class="space-y-6">
+
+    <!-- Big Action Touch Targets for Counter Officers -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <a
+        href="{% url 'asc_scanner' %}"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white p-5 rounded-2xl shadow-md transition flex items-center justify-center gap-3 touch-target"
       >
-        {{ st.asc_centre.name }} | {{ st.batch.product.name }}:
-        <strong>{{ st.bags_on_hand }} bags left</strong>
+        <span class="text-3xl">📷</span>
+        <div class="text-left">
+          <span class="text-lg font-black block leading-tight">{% trans "Scan Farmer QR" %}</span>
+          <span class="text-xs text-emerald-100">{% trans "Scan dynamic smartphone QR" %}</span>
+        </div>
+      </a>
+
+      <a
+        href="{% url 'farmer_search' %}"
+        class="bg-amber-600 hover:bg-amber-700 text-white p-5 rounded-2xl shadow-md transition flex items-center justify-center gap-3 touch-target"
+      >
+        <span class="text-3xl">💬</span>
+        <div class="text-left">
+          <span class="text-lg font-black block leading-tight">{% trans "SMS Backup Code" %}</span>
+          <span class="text-xs text-amber-100">{% trans "For keypad phone farmers" %}</span>
+        </div>
+      </a>
+
+      <a
+        href="{% url 'pending_assisted_requests' %}"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl shadow-md transition flex items-center justify-center gap-3 touch-target relative"
+      >
+        <span class="text-3xl">📝</span>
+        <div class="text-left">
+          <span class="text-lg font-black block leading-tight">{% trans "Officer-Assisted" %}</span>
+          <span class="text-xs text-indigo-100">{% trans "Two-Officer phone exception" %}</span>
+        </div>
+        {% if pending_assisted_count %}
+        <span class="absolute top-3 right-3 bg-rose-500 text-white text-xs font-black px-2 py-0.5 rounded-full shadow">
+          {{ pending_assisted_count }}
+        </span>
+        {% endif %}
+      </a>
+    </div>
+
+    <!-- ASC Head Specific Review Card (If pending assisted approvals exist) -->
+    {% if is_asc_head and pending_assisted_requests %}
+    <div class="bg-indigo-50 border-2 border-indigo-200 p-5 rounded-2xl shadow-sm">
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <h2 class="text-base font-black text-indigo-950 flex items-center gap-2">
+            <span>🛡️</span> {% trans "ASC Head Approvals Required (Two-Officer Rule)" %}
+          </h2>
+          <p class="text-xs text-indigo-700 mt-0.5">{% trans "Farmers without a phone waiting for your counter-signature authorization." %}</p>
+        </div>
+        <a href="{% url 'pending_assisted_requests' %}" class="text-xs font-bold text-indigo-800 hover:underline">
+          {% trans "View All Pending" %} &rarr;
+        </a>
       </div>
-      {% endfor %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        {% for req in pending_assisted_requests %}
+        <div class="bg-white p-3.5 rounded-xl border border-indigo-200 shadow-sm flex flex-col justify-between text-xs">
+          <div>
+            <div class="flex justify-between items-start">
+              <strong class="text-slate-800 text-sm">{{ req.farmer.full_name }}</strong>
+              <span class="font-mono text-slate-500 text-[11px]">{{ req.farmer.masked_nic }}</span>
+            </div>
+            <p class="text-slate-600 mt-1">{% trans "Reason:" %} <strong class="text-indigo-900">{{ req.get_reason_display }}</strong></p>
+            <p class="text-slate-400 text-[10px]">{% trans "Requested by:" %} {{ req.requested_by.username }}</p>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <form method="post" action="{% url 'approve_assisted_request' req.id %}" class="flex-1">
+              {% csrf_token %}
+              <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 rounded-lg text-xs">
+                ✓ {% trans "Approve" %}
+              </button>
+            </form>
+            <form method="post" action="{% url 'reject_assisted_request' req.id %}" class="flex-1">
+              {% csrf_token %}
+              <button type="submit" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold py-1.5 rounded-lg text-xs">
+                ✕ {% trans "Reject" %}
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Incoming Dispatches to be Received -->
+    {% if incoming_dispatches %}
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
+            <span>🚚</span> {% trans "Incoming Dispatches from Warehouse (Awaiting Receiving)" %}
+          </h2>
+          <p class="text-xs text-slate-500">{% trans "Verify stock on arrival. Count good, damaged, and missing bags." %}</p>
+        </div>
+        <span class="bg-blue-100 text-blue-900 font-mono text-xs font-bold px-2.5 py-1 rounded-full">{{ incoming_count }}</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 text-xs uppercase">
+              <th class="p-3">{% trans "Dispatch Ref" %}</th>
+              <th class="p-3">{% trans "Origin Warehouse" %}</th>
+              <th class="p-3">{% trans "Dispatched Date" %}</th>
+              <th class="p-3 text-right">{% trans "Action" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in incoming_dispatches %}
+            <tr class="border-b border-slate-100">
+              <td class="p-3 font-mono font-bold text-slate-900">{{ d.dispatch_reference }}</td>
+              <td class="p-3">{{ d.warehouse.name }}</td>
+              <td class="p-3 text-slate-500 text-xs">{{ d.dispatched_at|date:"Y-m-d H:i" }}</td>
+              <td class="p-3 text-right">
+                <a href="{% url 'receive_dispatch' d.id %}" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition inline-flex items-center gap-1 shadow-sm">
+                  📦 {% trans "Receive Stock" %} &rarr;
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Today's Issues & ASC Stock Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Today's Issues -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h2 class="text-base font-black text-slate-800">{% trans "Today's Fertilizer Issues" %}</h2>
+            <p class="text-xs text-slate-500">{% trans "Total issued today:" %} <strong class="text-emerald-800 font-mono">{{ today_total_kg }} kg</strong></p>
+          </div>
+          <span class="bg-emerald-100 text-emerald-900 font-mono text-xs font-bold px-2.5 py-1 rounded-full">
+            {{ today_issue_count }} {% trans "farmers" %}
+          </span>
+        </div>
+        <div class="overflow-x-auto max-h-80">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+                <th class="p-2.5">{% trans "Receipt" %}</th>
+                <th class="p-2.5">{% trans "Farmer" %}</th>
+                <th class="p-2.5">{% trans "Method" %}</th>
+                <th class="p-2.5 text-right">{% trans "Quantity" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for dist in today_distributions %}
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="p-2.5 font-mono font-bold">
+                  <a href="{% url 'distribution_receipt' dist.receipt_number %}" class="text-emerald-700 hover:underline">
+                    {{ dist.receipt_number }}
+                  </a>
+                </td>
+                <td class="p-2.5">
+                  <span class="font-medium text-slate-800">{{ dist.farmer.full_name }}</span>
+                  <span class="text-slate-400 block font-mono">{{ dist.farmer.masked_nic }}</span>
+                </td>
+                <td class="p-2.5">
+                  <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
+                    {{ dist.get_issue_method_display }}
+                  </span>
+                </td>
+                <td class="p-2.5 text-right font-black text-emerald-800 font-mono">
+                  {{ dist.quantity_kg }} kg
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="p-4 text-center text-slate-400">{% trans "No fertilizer issued today yet." %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Current Stock Balances & Health Badges -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h2 class="text-base font-black text-slate-800">{% trans "Stock Balances & Expiry (FEFO)" %}</h2>
+            <p class="text-xs text-slate-500">{% trans "Earliest expiring batches are issued first." %}</p>
+          </div>
+          <a href="{% url 'inventory_list' %}" class="text-xs font-bold text-emerald-800 hover:underline">
+            {% trans "Full Inventory" %} &rarr;
+          </a>
+        </div>
+        <div class="overflow-x-auto max-h-80">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+                <th class="p-2.5">{% trans "Product / Batch" %}</th>
+                <th class="p-2.5">{% trans "Expiry" %}</th>
+                <th class="p-2.5 text-right">{% trans "Bags on Hand" %}</th>
+                <th class="p-2.5 text-center">{% trans "Status" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for st in stocks %}
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="p-2.5">
+                  <span class="font-bold text-slate-800">{{ st.batch.product.name }}</span>
+                  <span class="text-slate-500 block font-mono text-[11px]">{{ st.batch.batch_number }}</span>
+                </td>
+                <td class="p-2.5 font-mono text-slate-600">{{ st.batch.expiry_date }}</td>
+                <td class="p-2.5 text-right font-black text-slate-900 font-mono">{{ st.bags_on_hand }}</td>
+                <td class="p-2.5 text-center">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold border {{ st.badge_color }}">
+                    {{ st.alert_badge }}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="p-4 text-center text-slate-400">{% trans "No stock balances found." %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
   {% endif %}
 
-  <!-- ASC Officer & Admin View: Today's Fertilizer Issues + Quick Actions -->
-  {% if show_operations %}
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div
-      class="lg:col-span-2 bg-white p-5 rounded-lg shadow-sm border border-slate-200"
-    >
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold text-slate-800">
-          Today's Fertilizer Issues ({{ today_distributions.count }})
-        </h2>
-        <span
-          class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded text-xs font-bold"
-        >
-          Total Issued Today: {{ today_total_kg }} kg
-        </span>
-      </div>
-      <table class="w-full text-left border-collapse text-sm">
-        <thead>
-          <tr class="bg-slate-100 border-b">
-            <th class="p-2.5">Receipt</th>
-            <th class="p-2.5">Farmer (Masked NIC)</th>
-            <th class="p-2.5">Batch</th>
-            <th class="p-2.5">Qty</th>
-            <th class="p-2.5">Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for dist in today_distributions %}
-          <tr class="border-b">
-            <td class="p-2.5 font-mono text-xs font-bold">
-              <a
-                href="{% url 'distribution_receipt' dist.receipt_number %}"
-                class="text-emerald-700 hover:underline"
-                >{{ dist.receipt_number }}</a
-              >
-            </td>
-            <td class="p-2.5">
-              {{ dist.farmer.full_name }}
-              <span class="text-xs text-slate-400"
-                >({{ dist.farmer.masked_nic }})</span
-              >
-            </td>
-            <td class="p-2.5 font-mono text-xs">
-              {{ dist.batch.batch_number }}
-            </td>
-            <td class="p-2.5 font-bold text-emerald-700">
-              {{ dist.quantity_kg }} kg
-            </td>
-            <td class="p-2.5 text-xs text-slate-500">
-              {{ dist.distributed_at|date:"H:i" }}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="p-4 text-center text-slate-500">
-              No fertilizer distributions recorded today yet.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+
+  <!-- ========================================================================= -->
+  <!-- 2. WAREHOUSE OFFICER SECTION                                              -->
+  <!-- ========================================================================= -->
+  {% if user.role == 'WAREHOUSE_OFFICER' %}
+  <div class="space-y-6">
+
+    <!-- Warehouse Officer Action Buttons -->
+    <div class="flex flex-wrap gap-4">
+      <a
+        href="{% url 'create_dispatch' %}"
+        class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition flex items-center gap-2 touch-target"
+      >
+        <span class="text-xl">🚚</span> {% trans "Create Dispatch to ASC" %}
+      </a>
+      <a
+        href="{% url 'create_batch' %}"
+        class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition flex items-center gap-2 touch-target"
+      >
+        <span class="text-xl">➕</span> {% trans "Register New Fertilizer Batch" %}
+      </a>
     </div>
 
-    <!-- Season Management Card (Admin) & Quick Links -->
-    <div
-      class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 space-y-4"
-    >
-      <h2 class="text-lg font-bold text-slate-800">
-        Season Management (Maha/Yala)
-      </h2>
-      <p class="text-xs text-slate-500">
-        Closing a season automatically blocks QR issuance for that season's
-        entitlements.
-      </p>
-      <div class="space-y-2">
+    <!-- Dispatch Status Overview -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-blue-50 border border-blue-200 p-4 rounded-2xl">
+        <span class="text-xs font-bold text-blue-800 uppercase block">{% trans "In Transit to ASCs" %}</span>
+        <span class="text-3xl font-black text-blue-900 font-mono mt-1 block">{{ dispatched_count }}</span>
+        <span class="text-xs text-blue-700">{% trans "Awaiting ASC receiving confirmation" %}</span>
+      </div>
+      <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
+        <span class="text-xs font-bold text-emerald-800 uppercase block">{% trans "Successfully Received" %}</span>
+        <span class="text-3xl font-black text-emerald-900 font-mono mt-1 block">{{ received_count }}</span>
+        <span class="text-xs text-emerald-700">{% trans "Confirmed with no discrepancies" %}</span>
+      </div>
+      <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl">
+        <span class="text-xs font-bold text-rose-800 uppercase block">{% trans "Discrepancies Reported" %}</span>
+        <span class="text-3xl font-black text-rose-900 font-mono mt-1 block">{{ discrepancy_count }}</span>
+        <span class="text-xs text-rose-700">{% trans "Damaged or missing bags reported" %}</span>
+      </div>
+    </div>
+
+    <!-- Warehouse Dispatches Table -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <h2 class="text-base font-black text-slate-800 mb-3">{% trans "Recent Dispatches" %}</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 text-xs uppercase">
+              <th class="p-3">{% trans "Dispatch Ref" %}</th>
+              <th class="p-3">{% trans "Destination ASC" %}</th>
+              <th class="p-3">{% trans "Dispatched Date" %}</th>
+              <th class="p-3">{% trans "Status" %}</th>
+              <th class="p-3 text-right">{% trans "Manifest" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in wh_dispatches %}
+            <tr class="border-b border-slate-100">
+              <td class="p-3 font-mono font-bold">{{ d.dispatch_reference }}</td>
+              <td class="p-3">{{ d.asc_centre.name }}</td>
+              <td class="p-3 text-slate-500 text-xs">{{ d.dispatched_at|date:"Y-m-d H:i" }}</td>
+              <td class="p-3">
+                <span class="px-2 py-0.5 rounded text-xs font-bold {% if d.status == 'RECEIVED' %}bg-emerald-100 text-emerald-800{% elif d.status == 'RECEIVED_WITH_DISCREPANCY' %}bg-rose-100 text-rose-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                  {{ d.get_status_display }}
+                </span>
+              </td>
+              <td class="p-3 text-right">
+                <a href="{% url 'receive_dispatch' d.id %}" class="text-emerald-700 hover:underline font-bold text-xs">
+                  {% trans "View Details" %} &rarr;
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="p-4 text-center text-slate-400">{% trans "No dispatches recorded yet." %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+
+  <!-- ========================================================================= -->
+  <!-- 3. ADMINISTRATOR SECTION                                                  -->
+  <!-- ========================================================================= -->
+  {% if user.role == 'ADMIN' or user.is_superuser %}
+  <div class="space-y-6">
+
+    <!-- Admin Master Counters -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs uppercase font-bold text-slate-500 block">{% trans "System Users" %}</span>
+        <span class="text-2xl font-black text-slate-800 font-mono">{{ total_users }}</span>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs uppercase font-bold text-slate-500 block">{% trans "Registered Farmers" %}</span>
+        <span class="text-2xl font-black text-emerald-700 font-mono">{{ total_farmers }}</span>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs uppercase font-bold text-slate-500 block">{% trans "ASC Centres" %}</span>
+        <span class="text-2xl font-black text-slate-800 font-mono">{{ total_ascs }}</span>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs uppercase font-bold text-slate-500 block">{% trans "Warehouses" %}</span>
+        <span class="text-2xl font-black text-slate-800 font-mono">{{ total_warehouses }}</span>
+      </div>
+    </div>
+
+    <!-- Season Management (Admin One-Click Toggle) -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <h2 class="text-base font-black text-slate-800">{% trans "Season Control (Maha / Yala)" %}</h2>
+          <p class="text-xs text-slate-500">{% trans "Closing a season locks fertilizer issuance for that season's entitlements." %}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         {% for s in all_seasons %}
-        <div
-          class="flex justify-between items-center p-2.5 border rounded bg-slate-50"
-        >
+        <div class="p-3 border rounded-xl bg-slate-50 flex justify-between items-center text-xs">
           <div>
-            <p class="text-sm font-bold">{{ s.name }}</p>
-            <span
-              class="text-[11px] px-2 py-0.5 rounded font-semibold {% if s.status == 'ACTIVE' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-200 text-slate-700{% endif %}"
-            >
+            <strong class="text-sm font-bold block text-slate-800">{{ s.name }}</strong>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded {% if s.status == 'ACTIVE' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-200 text-slate-700{% endif %}">
               {{ s.status }}
             </span>
           </div>
-          {% if user.role == 'ADMIN' or user.is_superuser %}
           <form method="post" action="{% url 'toggle_season_status' s.id %}">
             {% csrf_token %}
-            <button
-              type="submit"
-              class="text-xs px-3 py-1.5 rounded font-semibold {% if s.status == 'ACTIVE' %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-emerald-600 text-white hover:bg-emerald-700{% endif %}"
-            >
-              {{ s.status }} Season
+            <button type="submit" class="text-xs px-3 py-1.5 rounded-lg font-bold transition {% if s.status == 'ACTIVE' %}bg-rose-100 text-rose-800 hover:bg-rose-200{% else %}bg-emerald-600 text-white hover:bg-emerald-700{% endif %}">
+              {% if s.status == 'ACTIVE' %}{% trans "Close Season" %}{% else %}{% trans "Activate" %}{% endif %}
             </button>
           </form>
-          {% endif %}
         </div>
         {% endfor %}
       </div>
     </div>
+
+    <!-- Admin Quick Management Shortcuts -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <h2 class="text-base font-black text-slate-800 mb-3">{% trans "Administrative Operations" %}</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <a href="{% url 'manage_farmers' %}" class="bg-slate-100 hover:bg-slate-200 p-3 rounded-xl font-bold text-slate-800 text-center transition">
+          👨‍🌾 {% trans "Farmer Profiles & CSV Import" %}
+        </a>
+        <a href="{% url 'batch_traceability' %}" class="bg-slate-100 hover:bg-slate-200 p-3 rounded-xl font-bold text-slate-800 text-center transition">
+          🔍 {% trans "Batch Traceability Lifecycle" %}
+        </a>
+        <a href="{% url 'discrepancy_report' %}" class="bg-slate-100 hover:bg-slate-200 p-3 rounded-xl font-bold text-slate-800 text-center transition">
+          🚩 {% trans "Discrepancy Report" %}
+        </a>
+        <a href="{% url 'audit_logs' %}" class="bg-slate-100 hover:bg-slate-200 p-3 rounded-xl font-bold text-slate-800 text-center transition">
+          🛡️ {% trans "Audit Logs Trail" %}
+        </a>
+      </div>
+    </div>
+
   </div>
   {% endif %}
 
-  <!-- Auditor & Admin View: Discrepancies & Recent Audit Trail -->
-  {% if user.role == 'AUDITOR' or user.role == 'ADMIN' or user.is_superuser %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-      <h2 class="text-lg font-bold text-red-800 mb-3">
-        🚩 Dispatch Discrepancies ({{ discrepancy_dispatches.count }})
-      </h2>
-      <table class="w-full text-left border-collapse text-sm">
-        <thead>
-          <tr class="bg-slate-100 border-b">
-            <th class="p-2">Ref</th>
-            <th class="p-2">ASC Centre</th>
-            <th class="p-2">Dispatched</th>
-            <th class="p-2">Good / Damaged</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for d in discrepancy_dispatches %}
-          <tr class="border-b">
-            <td class="p-2 font-mono text-xs font-bold">
-              {{ d.dispatch_reference }}
-            </td>
-            <td class="p-2">{{ d.asc_centre.name }}</td>
-            <td class="p-2">{{ d.dispatched_bags }} bags</td>
-            <td class="p-2 text-red-700 font-semibold">
-              {{ d.received_good_bags }} good / {{ d.damaged_bags }} dmg
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="p-4 text-center text-slate-500">
-              No dispatch discrepancies reported.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+
+  <!-- ========================================================================= -->
+  <!-- 4. AUDITOR SECTION                                                        -->
+  <!-- ========================================================================= -->
+  {% if user.role == 'AUDITOR' %}
+  <div class="space-y-6">
+
+    <!-- Auditor KPI Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <span class="text-xs uppercase font-bold text-slate-500 block">{% trans "Total Distributions" %}</span>
+        <span class="text-2xl font-black text-slate-800 font-mono">{{ total_issues }}</span>
+      </div>
+
+      <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl">
+        <span class="text-xs uppercase font-bold text-indigo-800 block">{% trans "Assisted-Issue Rate" %}</span>
+        <span class="text-2xl font-black text-indigo-900 font-mono">{{ assisted_pct }}%</span>
+        <span class="text-[11px] text-indigo-700 block mt-0.5">{{ assisted_issues_count }} {% trans "assisted exceptions" %}</span>
+      </div>
+
+      <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl">
+        <span class="text-xs uppercase font-bold text-rose-800 block">{% trans "Discrepancy Incidents" %}</span>
+        <span class="text-2xl font-black text-rose-900 font-mono">{{ total_discrepancies }}</span>
+        <a href="{% url 'discrepancy_report' %}" class="text-[11px] text-rose-700 hover:underline block mt-0.5">
+          {% trans "View full discrepancy report" %} &rarr;
+        </a>
+      </div>
+
+      <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl">
+        <span class="text-xs uppercase font-bold text-amber-800 block">{% trans "Expired Stock Batches" %}</span>
+        <span class="text-2xl font-black text-amber-900 font-mono">{{ expired_stock_count }}</span>
+        <span class="text-[11px] text-amber-700 block mt-0.5">{% trans "Blocked from farmer issuance" %}</span>
+      </div>
     </div>
 
-    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+    <!-- Auditor Discrepancies Table -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
       <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-bold text-slate-800">
-          Recent Security & Audit Logs
-        </h2>
-        <a
-          href="{% url 'audit_logs' %}"
-          class="text-xs text-emerald-700 hover:underline font-semibold"
-          >View All →</a
-        >
+        <div>
+          <h2 class="text-base font-black text-slate-800">{% trans "Recent Discrepancies & Incidents" %}</h2>
+          <p class="text-xs text-slate-500">{% trans "Damaged or missing bags reported during receiving." %}</p>
+        </div>
+        <a href="{% url 'discrepancy_report' %}" class="text-xs font-bold text-emerald-800 hover:underline">
+          {% trans "All Discrepancies" %} &rarr;
+        </a>
       </div>
-      <div class="space-y-2">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+              <th class="p-2.5">{% trans "Ref" %}</th>
+              <th class="p-2.5">{% trans "ASC Centre" %}</th>
+              <th class="p-2.5 text-center text-amber-800">{% trans "Damaged" %}</th>
+              <th class="p-2.5 text-center text-rose-700">{% trans "Missing" %}</th>
+              <th class="p-2.5">{% trans "Reason" %}</th>
+              <th class="p-2.5">{% trans "Recorded By" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in discrepancy_records %}
+            <tr class="border-b border-slate-100 hover:bg-slate-50">
+              <td class="p-2.5 font-mono font-bold">{{ d.dispatch.dispatch_reference }}</td>
+              <td class="p-2.5">{{ d.dispatch.asc_centre.name }}</td>
+              <td class="p-2.5 text-center font-bold text-amber-800">{{ d.damaged_bags }}</td>
+              <td class="p-2.5 text-center font-bold text-rose-700">{{ d.missing_bags }}</td>
+              <td class="p-2.5 text-slate-600">{{ d.reason|truncatewords:8 }}</td>
+              <td class="p-2.5 text-slate-500">{{ d.recorded_by.username|default:"System" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="p-4 text-center text-slate-400">{% trans "No discrepancies recorded." %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Auditor Audit Trail Table -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <h2 class="text-base font-black text-slate-800">{% trans "Latest System Audit Trail" %}</h2>
+          <p class="text-xs text-slate-500">{% trans "Append-only, immutable security logs." %}</p>
+        </div>
+        <a href="{% url 'audit_logs' %}" class="text-xs font-bold text-emerald-800 hover:underline">
+          {% trans "Search Audit Logs" %} &rarr;
+        </a>
+      </div>
+      <div class="space-y-1.5">
         {% for log in recent_logs %}
-        <div class="p-2 border-b text-xs font-mono flex justify-between">
-          <span><strong>{{ log.action }}</strong> ({{ log.user.username|default:"System" }})</span>
-          <span class="text-slate-400">{{ log.timestamp|date:"M d, H:i" }}</span>
+        <div class="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-center text-xs font-mono">
+          <div>
+            <strong class="text-emerald-800">{{ log.action }}</strong>
+            <span class="text-slate-500 ml-2">by {{ log.user.username|default:"System" }}</span>
+            <span class="text-slate-400 block text-[11px] font-sans">{{ log.details }}</span>
+          </div>
+          <span class="text-slate-400 text-[11px] whitespace-nowrap">{{ log.timestamp|date:"M d, H:i" }}</span>
         </div>
         {% endfor %}
       </div>
     </div>
+
   </div>
   {% endif %}
+
 </div>
 {% endblock %}

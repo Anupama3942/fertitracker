@@ -95,6 +95,7 @@ class StockMovement(models.Model):
         DISCREPANCY = 'DISCREPANCY', 'Missing / Discrepancy'
         ADJUSTMENT  = 'ADJUSTMENT', 'Manual Adjustment'
         REVERSAL    = 'REVERSAL', 'Transaction Reversal'
+        WRITE_OFF   = 'WRITE_OFF', 'Expired Stock Write-Off'
 
     stock           = models.ForeignKey(ASCStock, on_delete=models.PROTECT, related_name='movements')
     movement_type   = models.CharField(max_length=30, choices=MovementTypeChoices.choices)
@@ -118,4 +119,23 @@ class Discrepancy(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Discrepancy for {self.dispatch.dispatch_reference}: {self.damaged_bags} damaged, {self.missing_bags} missing"
+        return f"Discrepancy for {self.dispatch.dispatch_reference}: {self.damaged_bags} damaged, {self.missing_bags} missing"
+
+
+class StockThreshold(models.Model):
+    """
+    Configurable low-stock alert threshold per Agrarian Service Centre and Fertilizer Product.
+    Allows administrators to customize thresholds per centre (falls back to settings default).
+    """
+    asc_centre = models.ForeignKey(ASCCentre, on_delete=models.CASCADE, related_name='stock_thresholds')
+    product = models.ForeignKey(FertilizerProduct, on_delete=models.CASCADE, related_name='stock_thresholds')
+    threshold_bags = models.PositiveIntegerField(default=10)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['asc_centre', 'product'], name='unique_asc_product_threshold')
+        ]
+
+    def __str__(self):
+        return f"{self.asc_centre.name} | {self.product.name} (Threshold: {self.threshold_bags} bags)"
+

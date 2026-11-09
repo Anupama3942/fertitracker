@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">🔍</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "Farmer Search (SMS & Assisted Issue)" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Search by NIC or Name for farmers who cannot present a smartphone QR code." %}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        href="{% url 'asc_scanner' %}"
+        class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-1.5"
+      >
+        <span>📷</span>
+        <span>{% trans "Back to Scanner" %}</span>
+      </a>
+      <a
+        href="{% url 'pending_assisted_requests' %}"
+        class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-1.5"
+      >
+        <span>📝</span>
+        <span>{% trans "Assisted Approvals" %}</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Search Input Card -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <form method="get" class="flex flex-col sm:flex-row gap-3">
+      <div class="flex-1 relative">
+        <input
+          type="text"
+          name="q"
+          value="{{ q }}"
+          placeholder="{% trans "Enter Farmer NIC (e.g. 198512345678) or Name..." %}"
+          class="w-full text-base border-2 border-slate-300 rounded-xl px-4 py-3 pl-11 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+          autofocus
+        />
+        <span class="absolute left-3.5 top-3.5 text-slate-400 text-lg">🔍</span>
+      </div>
+      <button
+        type="submit"
+        class="touch-target bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-2"
+      >
+        <span>{% trans "Search" %}</span>
+      </button>
+    </form>
+    <p class="text-xs text-slate-500 mt-2">
+      ℹ️ {% trans "Privacy Protection: Farmer National Identity Card (NIC) numbers are masked on all screens." %}
+    </p>
+  </div>
+
+  <!-- Search Results -->
+  {% if q %}
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+      <h2 class="font-bold text-slate-800 text-base">
+        {% trans "Search Results for" %} "<span class="text-emerald-700">{{ q }}</span>"
+      </h2>
+      <span class="text-xs font-semibold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">
+        {{ farmers|length }} {% trans "Found" %}
+      </span>
+    </div>
+
+    {% if farmers %}
+    <div class="divide-y divide-slate-100">
+      {% for farmer in farmers %}
+      <div class="p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50 transition">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="font-black text-lg text-slate-900">{{ farmer.full_name }}</span>
+            <span class="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded border border-slate-300">
+              {{ farmer.masked_nic }}
+            </span>
+          </div>
+          <div class="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+            <span>📱 <strong>{{ farmer.mobile_number }}</strong></span>
+            <span>📍 {{ farmer.arpa_division|default:"General Division" }}</span>
+          </div>
+          <div class="pt-1">
+            {% for ent in farmer.entitlements.all %}
+              <span class="inline-block text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md mr-1.5">
+                {{ ent.product.name }}: {{ ent.remaining_kg }} / {{ ent.approved_kg }} kg ({{ ent.season.name }})
+              </span>
+            {% empty %}
+              <span class="text-xs text-rose-600 font-semibold">{% trans "No entitlement recorded for active season" %}</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <!-- Button 1: Send 6-digit SMS Code -->
+          <form method="post" action="{% url 'send_sms_code' farmer.id %}" class="flex-1 md:flex-initial">
+            {% csrf_token %}
+            <button
+              type="submit"
+              onclick="return confirm('{% trans "Send 5-minute SMS verification code to farmer?" %}');"
+              class="touch-target w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5"
+            >
+              <span>📱</span>
+              <span>{% trans "Send SMS Code" %}</span>
+            </button>
+          </form>
+
+          <!-- Button 2: Request Officer-Assisted Issue -->
+          <a
+            href="{% url 'create_assisted_request' farmer.id %}"
+            class="touch-target flex-1 md:flex-initial bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5"
+          >
+            <span>🤝</span>
+            <span>{% trans "Assisted Issue" %}</span>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-slate-500 space-y-2">
+      <span class="text-3xl block">🌾</span>
+      <p class="font-bold text-base text-slate-700">{% trans "No farmers found matching your query." %}</p>
+      <p class="text-xs text-slate-500">{% trans "Try searching by full NIC or last name, or check farmer registration under Farmers Management." %}</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

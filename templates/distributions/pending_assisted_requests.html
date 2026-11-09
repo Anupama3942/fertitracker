@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Header Card -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">📝</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "Assisted Issue Authorizations" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Agrarian Service Centre" %}: <strong>{{ user.asc_centre.name|default:"All Centres" }}</strong> &bull;
+        {% if is_head %}
+          <span class="text-emerald-700 font-bold">⭐ {% trans "You have ASC Head approval authorization" %}</span>
+        {% else %}
+          <span class="text-slate-600 font-medium">{% trans "Logged in as Counter Officer" %}</span>
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        href="{% url 'farmer_search' %}"
+        class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
+      >
+        <span>🔍</span>
+        <span>{% trans "New Assisted Request" %}</span>
+      </a>
+      <a
+        href="{% url 'asc_scanner' %}"
+        class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-1.5"
+      >
+        <span>📷</span>
+        <span>{% trans "Scanner" %}</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- SECTION 1: APPROVED REQUESTS READY FOR ISSUE AT COUNTER -->
+  {% if approved_requests %}
+  <div class="bg-emerald-50 rounded-2xl shadow-sm border-2 border-emerald-300 overflow-hidden">
+    <div class="p-4 bg-emerald-600 text-white flex justify-between items-center font-bold">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">✅</span>
+        <span class="text-base">{% trans "Approved Requests — Ready for Issue at Counter" %}</span>
+      </div>
+      <span class="bg-emerald-800 text-emerald-100 text-xs px-2.5 py-1 rounded-full font-bold">
+        {{ approved_requests|length }} {% trans "Approved" %}
+      </span>
+    </div>
+
+    <div class="divide-y divide-emerald-100 bg-white">
+      {% for req in approved_requests %}
+      <div class="p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="font-black text-lg text-slate-900">{{ req.farmer.full_name }}</span>
+            <span class="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-300">
+              {{ req.farmer.masked_nic }}
+            </span>
+            <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded">
+              {% trans "Approved by" %} {{ req.approved_by.username }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-600">
+            <strong>{% trans "Reason" %}:</strong> {{ req.get_reason_display }}
+            {% if req.reason_note %} &bull; <em>"{{ req.reason_note }}"</em>{% endif %}
+          </p>
+          <p class="text-xs font-mono text-slate-500">
+            ⏳ {% trans "Expires at" %}: {{ req.expires_at|date:"H:i" }}
+          </p>
+        </div>
+
+        <a
+          href="{% url 'assisted_issue_confirm' req.id %}"
+          class="touch-target bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 py-3 rounded-xl shadow transition flex items-center justify-center gap-2 text-sm"
+        >
+          <span>📦</span>
+          <span>{% trans "Issue Fertilizer Now" %} &rarr;</span>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SECTION 2: PENDING APPROVAL REQUESTS (REQUIRES ASC HEAD) -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">⏳</span>
+        <h2 class="font-bold text-slate-800 text-base">
+          {% trans "Pending Secondary Approvals (ASC Head)" %}
+        </h2>
+      </div>
+      <span class="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full">
+        {{ pending_requests|length }} {% trans "Pending" %}
+      </span>
+    </div>
+
+    {% if pending_requests %}
+    <div class="divide-y divide-slate-100">
+      {% for req in pending_requests %}
+      <div class="p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 hover:bg-slate-50/80 transition">
+        <div class="space-y-1.5 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-black text-lg text-slate-900">#{{ req.id }} &bull; {{ req.farmer.full_name }}</span>
+            <span class="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-300">
+              {{ req.farmer.masked_nic }}
+            </span>
+            <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded">
+              {{ req.get_reason_display }}
+            </span>
+          </div>
+
+          {% if req.reason_note %}
+          <div class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <strong>{% trans "Officer Note" %}:</strong> {{ req.reason_note }}
+          </div>
+          {% endif %}
+
+          <div class="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+            <span>👤 {% trans "Requested by" %}: <strong>{{ req.requested_by.username }}</strong></span>
+            <span>📍 {{ req.asc_centre.name }}</span>
+            <span>🕒 {{ req.created_at|date:"H:i" }}</span>
+            <span class="text-rose-600 font-semibold">⏳ {% trans "Valid until" %} {{ req.expires_at|date:"H:i" }}</span>
+          </div>
+        </div>
+
+        <!-- Action Area -->
+        <div class="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+          {% if user == req.requested_by %}
+            <!-- Two-Officer Rule Protection: Requester CANNOT approve -->
+            <div class="bg-slate-100 text-slate-600 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-300 text-center">
+              🛡️ {% trans "Two-Officer Rule: You cannot approve your own request." %}
+            </div>
+          {% elif is_head %}
+            <!-- ASC Head Approval Form -->
+            <form method="post" action="{% url 'approve_assisted_request' req.id %}">
+              {% csrf_token %}
+              <button
+                type="submit"
+                onclick="return confirm('{% trans "Approve assisted issue for this farmer?" %}');"
+                class="touch-target w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5"
+              >
+                <span>✓</span>
+                <span>{% trans "Approve Request" %}</span>
+              </button>
+            </form>
+
+            <!-- ASC Head Rejection Form -->
+            <form method="post" action="{% url 'reject_assisted_request' req.id %}" onsubmit="return handleReject(this);">
+              {% csrf_token %}
+              <input type="hidden" name="rejection_reason" value="" />
+              <button
+                type="submit"
+                class="touch-target w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
+              >
+                <span>✕</span>
+                <span>{% trans "Reject" %}</span>
+              </button>
+            </form>
+          {% else %}
+            <div class="text-xs text-slate-500 italic bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+              {% trans "Awaiting approval by ASC Head." %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-slate-500 space-y-1">
+      <span class="text-2xl block">🎉</span>
+      <p class="font-bold text-slate-700">{% trans "No pending assisted issue requests." %}</p>
+      <p class="text-xs text-slate-500">{% trans "All requests have been approved, rejected, or expired." %}</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  function handleReject(form) {
+    const reason = prompt("{% trans "Optional: Enter reason for rejecting this assisted issue request:" %}");
+    if (reason === null) {
+      return false; // User cancelled prompt
+    }
+    form.querySelector('input[name="rejection_reason"]').value = reason;
+    return true;
+  }
+</script>
+{% endblock %}

@@ -1,34 +1,137 @@
 {% extends 'base.html' %}
+{% load i18n %}
+
 {% block content %}
-<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
-    <h1 class="text-2xl font-bold text-slate-800 mb-1">Append-Only Audit Logs</h1>
-    <p class="text-sm text-slate-500 mb-4">Immutable system audit trail for oversight and regulatory inspection (FR-17).</p>
-    
-    <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-sm">
-            <thead>
-                <tr class="bg-slate-100 border-b">
-                    <th class="p-3">Timestamp</th>
-                    <th class="p-3">User</th>
-                    <th class="p-3">Action</th>
-                    <th class="p-3">IP Address</th>
-                    <th class="p-3">Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in logs %}
-                <tr class="border-b font-mono text-xs">
-                    <td class="p-3">{{ log.timestamp }}</td>
-                    <td class="p-3 font-semibold">{{ log.user.username|default:"System" }}</td>
-                    <td class="p-3 text-emerald-700 font-bold">{{ log.action }}</td>
-                    <td class="p-3">{{ log.ip_address|default:"N/A" }}</td>
-                    <td class="p-3 text-slate-600">{{ log.details }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="p-4 text-center text-slate-500">No audit logs recorded yet.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="space-y-6">
+
+  <!-- Header Card & Export Buttons -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">🛡️</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "Append-Only Security & Compliance Audit Trail" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Immutable system audit trail for regulatory inspection (FR-17). Records cannot be edited or deleted." %}
+      </p>
     </div>
+
+    <div class="flex gap-2 print:hidden">
+      <a
+        href="?user={{ selected_user }}&action={{ action_filter }}&start_date={{ start_date }}&end_date={{ end_date }}&q={{ q }}&export=csv"
+        class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
+      >
+        📥 {% trans "Export CSV" %}
+      </a>
+      <button
+        onclick="window.print()"
+        class="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
+      >
+        🖨️ {% trans "Print / Save PDF" %}
+      </button>
+    </div>
+  </div>
+
+  <!-- Search & Filter Card -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs items-end">
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "User" %}</label>
+        <select name="user" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600">
+          <option value="">{% trans "All Users" %}</option>
+          {% for u in users %}
+          <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:"s" %}selected{% endif %}>
+            {{ u.username }} ({{ u.get_role_display }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "Action Type" %}</label>
+        <input
+          type="text"
+          name="action"
+          value="{{ action_filter }}"
+          placeholder="e.g. DISTRIBUTION_ISSUED"
+          class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600 font-mono text-xs"
+        />
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "From Date" %}</label>
+        <input
+          type="date"
+          name="start_date"
+          value="{{ start_date }}"
+          class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600"
+        />
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "To Date" %}</label>
+        <input
+          type="date"
+          name="end_date"
+          value="{{ end_date }}"
+          class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600"
+        />
+      </div>
+
+      <div class="flex gap-2">
+        <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition">
+          🔍 {% trans "Filter" %}
+        </button>
+        <a href="{% url 'audit_logs' %}" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-3 rounded-lg text-xs transition">
+          {% trans "Reset" %}
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Read-Only Audit Log Table -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <span class="text-xs font-bold text-slate-600">
+        {% trans "Showing" %} {{ logs|length }} {% trans "of" %} {{ total_count }} {% trans "recorded security events" %}
+      </span>
+      <span class="text-[11px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-mono">
+        🔒 {% trans "Read-Only Append Log" %}
+      </span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+            <th class="p-3">{% trans "Timestamp" %}</th>
+            <th class="p-3">{% trans "User" %}</th>
+            <th class="p-3">{% trans "Action / Event" %}</th>
+            <th class="p-3">{% trans "IP Address" %}</th>
+            <th class="p-3">{% trans "Event Details / Metadata" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr class="border-b border-slate-100 font-mono text-xs hover:bg-slate-50 transition">
+            <td class="p-3 text-slate-500 whitespace-nowrap">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+            <td class="p-3 font-semibold text-slate-900">{{ log.user.username|default:"System" }}</td>
+            <td class="p-3 text-emerald-800 font-bold whitespace-nowrap">{{ log.action }}</td>
+            <td class="p-3 text-slate-500">{{ log.ip_address|default:"127.0.0.1" }}</td>
+            <td class="p-3 font-sans text-slate-700 text-xs">{{ log.details }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="p-6 text-center text-slate-400 font-sans">
+              {% trans "No audit logs found matching the filter criteria." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

@@ -19,6 +19,7 @@ class User(AbstractUser):
         default=RoleChoices.FARMER
         )
     asc_centre = models.ForeignKey('core.ASCCentre', on_delete=models.SET_NULL, null=True, blank=True, related_name='officers')
+    is_asc_head = models.BooleanField(default=False)
     
     # Require new officers to change their password at first login.
     must_change_password = models.BooleanField(default=False)
@@ -27,11 +28,37 @@ class User(AbstractUser):
     is_account_active = models.BooleanField(default=True)
     
     failed_login_attempts = models.IntegerField(default=0)
-    
     locked_until = models.DateTimeField(null=True, blank=True)
+
+    # Brute-force protection for 6-digit code entry by officers
+    failed_code_attempts = models.PositiveIntegerField(default=0)
+    code_locked_until = models.DateTimeField(null=True, blank=True)
     
     def is_locked(self):
-        return self.locked_until and timezone.now() < self.locked_until
+        return bool(self.locked_until and timezone.now() < self.locked_until)
+
+    def is_code_locked(self):
+        if self.code_locked_until:
+            if timezone.now() < self.code_locked_until:
+                return True
+            else:
+                # Lockout expired; reset counters
+                self.failed_code_attempts = 0
+                self.code_locked_until = None
+                self.save(update_fields=['failed_code_attempts', 'code_locked_until'])
+        return False
+
+    def record_failed_code_attempt(self):
+        self.failed_code_attempts += 1
+        if self.failed_code_attempts >= 5:
+            self.code_locked_until = timezone.now() + timedelta(minutes=10)
+        self.save(update_fields=['failed_code_attempts', 'code_locked_until'])
+
+    def reset_failed_code_attempts(self):
+        if self.failed_code_attempts > 0 or self.code_locked_until is not None:
+            self.failed_code_attempts = 0
+            self.code_locked_until = None
+            self.save(update_fields=['failed_code_attempts', 'code_locked_until'])
 
     def __str__(self):
         """Return the username and display name of the user."""

@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Header Card -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">📋</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "Officer-Assisted Issues Audit Report" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Auditor & Administrative oversight on exception-based fertilizer distributions." %}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 print:hidden">
+      <a
+        href="?asc_centre={{ selected_asc }}&officer={{ selected_officer }}&start_date={{ start_date }}&end_date={{ end_date }}&export=csv"
+        class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow-sm"
+      >
+        📥 {% trans "Export CSV" %}
+      </a>
+      <button
+        onclick="window.print()"
+        class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow-sm"
+      >
+        🖨️ {% trans "Print / PDF" %}
+      </button>
+      <a
+        href="{% url 'reports_search' %}"
+        class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs transition"
+      >
+        &larr; {% trans "All Reports" %}
+      </a>
+      <a
+        href="{% url 'audit_logs' %}"
+        class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-2 rounded-xl text-xs transition"
+      >
+        🛡️ {% trans "Audit Logs" %}
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "ASC Centre" %}</label>
+        <select name="asc_centre" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600">
+          <option value="">{% trans "All Centres" %}</option>
+          {% for asc in asc_centres %}
+          <option value="{{ asc.id }}" {% if selected_asc == asc.id|stringformat:"s" %}selected{% endif %}>{{ asc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "Officer" %}</label>
+        <select name="officer" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600">
+          <option value="">{% trans "All Officers" %}</option>
+          {% for off in officers %}
+          <option value="{{ off.id }}" {% if selected_officer == off.id|stringformat:"s" %}selected{% endif %}>{{ off.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "Start Date" %}</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600" />
+      </div>
+
+      <div class="flex items-end gap-2">
+        <div class="flex-1">
+          <label class="block font-bold text-slate-700 mb-1">{% trans "End Date" %}</label>
+          <input type="date" name="end_date" value="{{ end_date }}" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600" />
+        </div>
+        <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2.5 rounded-lg transition">
+          {% trans "Filter" %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Key Metrics (KPIs) -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+        {% trans "Total Distributions" %}
+      </span>
+      <span class="text-3xl font-black text-slate-900 mt-1 block">{{ total_count }}</span>
+      <span class="text-xs text-slate-500 mt-1 block">{% trans "Across all issue channels" %}</span>
+    </div>
+
+    <div class="bg-amber-50 p-5 rounded-2xl shadow-sm border border-amber-200">
+      <span class="text-xs font-bold text-amber-800 uppercase tracking-wider block">
+        {% trans "Assisted Issues (Exceptions)" %}
+      </span>
+      <span class="text-3xl font-black text-amber-900 mt-1 block">{{ assisted_count }}</span>
+      <span class="text-xs text-amber-700 mt-1 block">{% trans "Two-Officer approved" %}</span>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+        {% trans "Assisted Ratio (%)" %}
+      </span>
+      <span class="text-3xl font-black {% if assisted_pct > 25 %}text-rose-600{% else %}text-emerald-700{% endif %} mt-1 block">
+        {{ assisted_pct }}%
+      </span>
+      <span class="text-xs text-slate-500 mt-1 block">
+        {% if assisted_pct > 25 %}
+          ⚠️ {% trans "High exception rate requires auditor attention" %}
+        {% else %}
+          ✓ {% trans "Within expected operational tolerance" %}
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Two-Column Breakdown: Reason vs Officer Pattern Analysis -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Card 1: Breakdown by Reason -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+      <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+        <span>📊</span>
+        <span>{% trans "Breakdown by Exception Reason" %}</span>
+      </h3>
+      {% if reason_breakdown %}
+      <div class="divide-y divide-slate-100 text-sm">
+        {% for r in reason_breakdown %}
+        <div class="py-2.5 flex justify-between items-center">
+          <span class="font-medium text-slate-700">{{ r.reason }}</span>
+          <span class="font-bold bg-slate-100 text-slate-900 px-2.5 py-0.5 rounded-full text-xs">
+            {{ r.count }} {% trans "issues" %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-slate-500 italic">{% trans "No assisted issues recorded in this range." %}</p>
+      {% endif %}
+    </div>
+
+    <!-- Card 2: Officer Exception Pattern Analysis -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+      <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+        <span>🛡️</span>
+        <span>{% trans "Officer Exception Pattern Ratio" %}</span>
+      </h3>
+      {% if officer_stats %}
+      <div class="divide-y divide-slate-100 text-sm">
+        {% for stat in officer_stats %}
+        <div class="py-2.5 flex justify-between items-center">
+          <div>
+            <span class="font-bold text-slate-900 block">{{ stat.officer.username }}</span>
+            <span class="text-xs text-slate-500">
+              {{ stat.assisted_issues }} {% trans "assisted of" %} {{ stat.total_issues }} {% trans "total" %}
+            </span>
+          </div>
+          <span class="font-mono font-bold text-xs px-2.5 py-1 rounded-full {% if stat.assisted_pct > 30 %}bg-rose-100 text-rose-800{% else %}bg-slate-100 text-slate-700{% endif %}">
+            {{ stat.assisted_pct }}%
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-slate-500 italic">{% trans "No distribution records for officers in this range." %}</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Detailed Assisted Issues Table -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 bg-slate-50 border-b border-slate-200">
+      <h3 class="font-bold text-slate-800 text-sm">
+        {% trans "Recent Officer-Assisted Distributions Log" %}
+      </h3>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider">
+            <th class="p-3">{% trans "Receipt #" %}</th>
+            <th class="p-3">{% trans "Farmer" %}</th>
+            <th class="p-3">{% trans "ASC Centre" %}</th>
+            <th class="p-3">{% trans "Reason" %}</th>
+            <th class="p-3">{% trans "Issued By" %}</th>
+            <th class="p-3">{% trans "Approved By (Head)" %}</th>
+            <th class="p-3">{% trans "Timestamp" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for dist in distributions %}
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3 font-mono font-bold text-slate-900">
+              <a href="{% url 'distribution_receipt' dist.receipt_number %}" class="text-emerald-700 hover:underline">
+                {{ dist.receipt_number }}
+              </a>
+            </td>
+            <td class="p-3">
+              <span class="font-bold text-slate-900 block">{{ dist.farmer.full_name }}</span>
+              <span class="font-mono text-slate-500 text-2xs">{{ dist.farmer.masked_nic }}</span>
+            </td>
+            <td class="p-3 text-slate-700">{{ dist.asc_centre.name }}</td>
+            <td class="p-3">
+              <span class="font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                {{ dist.assisted_approval.get_reason_display|default:"Assisted Issue" }}
+              </span>
+              {% if dist.assisted_approval.reason_note %}
+              <span class="text-2xs text-slate-500 block mt-0.5 max-w-xs truncate" title="{{ dist.assisted_approval.reason_note }}">
+                "{{ dist.assisted_approval.reason_note }}"
+              </span>
+              {% endif %}
+            </td>
+            <td class="p-3 font-semibold text-slate-800">{{ dist.issued_by.username }}</td>
+            <td class="p-3 font-semibold text-emerald-800">{{ dist.assisted_approval.approved_by.username|default:"-" }}</td>
+            <td class="p-3 text-slate-500 font-mono">{{ dist.distributed_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="p-6 text-center text-slate-500 italic">
+              {% trans "No assisted issues found matching filter criteria." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Card & Search -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">🔍</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "End-to-End Batch Traceability Lifecycle" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Follow a fertilizer batch through its complete life: creation, warehouse dispatch, receiving, farmer issues, and write-offs." %}
+      </p>
+    </div>
+
+    <div class="flex gap-2 print:hidden">
+      <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition">
+        🖨️ {% trans "Print / Save PDF" %}
+      </button>
+      <a href="{% url 'reports_search' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-4 rounded-xl transition">
+        &larr; {% trans "All Reports" %}
+      </a>
+    </div>
+  </div>
+
+  <!-- Search / Quick Select Batch -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden">
+    <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
+      <div class="flex-1">
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+          {% trans "Select or Enter Fertilizer Batch Number:" %}
+        </label>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            name="batch_number"
+            value="{{ batch_query }}"
+            placeholder="e.g. UREA-2026-B01"
+            class="flex-1 border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold uppercase outline-none focus:border-emerald-600"
+            required
+          />
+          <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow transition">
+            🔎 {% trans "Trace Batch" %}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Quick Batch Pills -->
+    {% if all_batches %}
+    <div class="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+      <span class="text-slate-400 font-semibold">{% trans "Quick Select:" %}</span>
+      {% for b in all_batches %}
+      <a
+        href="?batch_number={{ b.batch_number }}"
+        class="bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 border border-slate-200 px-2.5 py-1 rounded-lg font-mono text-[11px] transition {% if b.batch_number == batch_query %}bg-emerald-200 text-emerald-900 font-bold border-emerald-400{% endif %}"
+      >
+        {{ b.batch_number }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if batch %}
+  <!-- Batch Overview Card -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+      <div>
+        <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">{% trans "Batch Dossier" %}</span>
+        <h2 class="text-3xl font-black text-slate-900 font-mono mt-0.5">{{ batch.batch_number }}</h2>
+        <p class="text-sm text-slate-600 mt-1">
+          <strong>{{ batch.product.name }}</strong> ({{ batch.product.bag_weight_kg }} kg {% trans "per bag" %}) &bull;
+          {% trans "Source Warehouse:" %} <strong>{{ batch.warehouse.name }}</strong>
+        </p>
+      </div>
+
+      <div class="text-right">
+        <span class="text-xs uppercase font-bold text-slate-400 tracking-wider block">{% trans "Expiry Status (FEFO)" %}</span>
+        {% if batch.is_expired %}
+        <span class="inline-block bg-rose-100 text-rose-800 border-2 border-rose-300 px-3 py-1 rounded-full text-xs font-black mt-1">
+          🚨 {% trans "EXPIRED" %} ({{ batch.expiry_date }})
+        </span>
+        {% elif batch.days_to_expiry <= 60 %}
+        <span class="inline-block bg-amber-100 text-amber-800 border-2 border-amber-300 px-3 py-1 rounded-full text-xs font-black mt-1">
+          ⚠️ {% trans "FEFO PRIORITY" %} ({{ batch.days_to_expiry }} {% trans "days left" %})
+        </span>
+        {% else %}
+        <span class="inline-block bg-emerald-100 text-emerald-800 border-2 border-emerald-300 px-3 py-1 rounded-full text-xs font-black mt-1">
+          ✅ {% trans "HEALTHY STOCK" %} ({{ batch.expiry_date }})
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Reconciliation Balance Ledger KPIs -->
+    <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-4 text-center">
+      <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+        <span class="text-[11px] font-bold uppercase text-slate-500 block">{% trans "Dispatched" %}</span>
+        <span class="text-xl font-black text-slate-800 font-mono">{{ total_dispatched_bags }}</span>
+        <span class="text-[10px] text-slate-400 block">{% trans "bags" %}</span>
+      </div>
+
+      <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
+        <span class="text-[11px] font-bold uppercase text-emerald-800 block">{% trans "Received Good" %}</span>
+        <span class="text-xl font-black text-emerald-900 font-mono">{{ total_received_bags }}</span>
+        <span class="text-[10px] text-emerald-700 block">{% trans "bags" %}</span>
+      </div>
+
+      <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+        <span class="text-[11px] font-bold uppercase text-amber-800 block">{% trans "Damaged" %}</span>
+        <span class="text-xl font-black text-amber-900 font-mono">{{ total_damaged_bags }}</span>
+        <span class="text-[10px] text-amber-700 block">{% trans "bags" %}</span>
+      </div>
+
+      <div class="bg-rose-50 border border-rose-200 p-3 rounded-xl">
+        <span class="text-[11px] font-bold uppercase text-rose-800 block">{% trans "Missing" %}</span>
+        <span class="text-xl font-black text-rose-900 font-mono">{{ total_missing_bags }}</span>
+        <span class="text-[10px] text-rose-700 block">{% trans "bags" %}</span>
+      </div>
+
+      <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl">
+        <span class="text-[11px] font-bold uppercase text-blue-800 block">{% trans "Issued to Farmers" %}</span>
+        <span class="text-xl font-black text-blue-900 font-mono">{{ total_issued_bags }}</span>
+        <span class="text-[10px] text-blue-700 block">{{ total_issued_kg }} kg</span>
+      </div>
+
+      <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl">
+        <span class="text-[11px] font-bold uppercase text-purple-800 block">{% trans "Current On Hand" %}</span>
+        <span class="text-xl font-black text-purple-900 font-mono">{{ total_on_hand_bags }}</span>
+        <span class="text-[10px] text-purple-700 block">{% trans "bags at ASCs" %}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 1 & 2: Warehouse Dispatches & Receiving -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-xl">🚚</span>
+      <h3 class="text-base font-black text-slate-800">
+        {% trans "Stage 1 & 2: Warehouse Dispatches & ASC Receiving" %}
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+            <th class="p-2.5">{% trans "Dispatch Ref" %}</th>
+            <th class="p-2.5">{% trans "Destination ASC" %}</th>
+            <th class="p-2.5 text-center">{% trans "Dispatched" %}</th>
+            <th class="p-2.5 text-center text-emerald-800">{% trans "Good Received" %}</th>
+            <th class="p-2.5 text-center text-amber-800">{% trans "Damaged" %}</th>
+            <th class="p-2.5 text-center text-rose-700">{% trans "Missing" %}</th>
+            <th class="p-2.5">{% trans "Status" %}</th>
+            <th class="p-2.5">{% trans "Dispatched Date" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in dispatches %}
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="p-2.5 font-mono font-bold text-slate-900">
+              <a href="{% url 'receive_dispatch' item.dispatch.id %}" class="text-emerald-700 hover:underline">
+                {{ item.dispatch.dispatch_reference }}
+              </a>
+            </td>
+            <td class="p-2.5 font-medium">{{ item.dispatch.asc_centre.name }}</td>
+            <td class="p-2.5 text-center font-bold font-mono">{{ item.dispatched_bags }}</td>
+            <td class="p-2.5 text-center font-bold font-mono text-emerald-800">{{ item.received_bags }}</td>
+            <td class="p-2.5 text-center font-bold font-mono text-amber-800">{{ item.damaged_bags }}</td>
+            <td class="p-2.5 text-center font-bold font-mono text-rose-700">{{ item.missing_bags }}</td>
+            <td class="p-2.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if item.dispatch.status == 'RECEIVED' %}bg-emerald-100 text-emerald-800{% elif item.dispatch.status == 'RECEIVED_WITH_DISCREPANCY' %}bg-rose-100 text-rose-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                {{ item.dispatch.get_status_display }}
+              </span>
+            </td>
+            <td class="p-2.5 text-slate-500 font-mono">{{ item.dispatch.dispatched_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="p-4 text-center text-slate-400">{% trans "No dispatches recorded for this batch." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Stage 3: Current Stock on Hand at ASC Centres -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-xl">🏬</span>
+      <h3 class="text-base font-black text-slate-800">
+        {% trans "Stage 3: Current Stock Balances Across Agrarian Service Centres" %}
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+            <th class="p-2.5">{% trans "ASC Centre" %}</th>
+            <th class="p-2.5 text-center">{% trans "Bags on Hand" %}</th>
+            <th class="p-2.5 text-center">{% trans "Total Usable Weight" %}</th>
+            <th class="p-2.5">{% trans "Last Updated" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for st in current_stocks %}
+          <tr class="border-b border-slate-100">
+            <td class="p-2.5 font-bold text-slate-800">{{ st.asc_centre.name }}</td>
+            <td class="p-2.5 text-center font-black font-mono text-purple-900 text-sm">{{ st.bags_on_hand }} {% trans "bags" %}</td>
+            <td class="p-2.5 text-center font-mono font-bold">{{ st.total_weight_kg }} kg</td>
+            <td class="p-2.5 text-slate-500 font-mono">{{ st.last_updated|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="p-4 text-center text-slate-400">{% trans "No stock balances found." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Stage 4: Distributions Issued to Farmers -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+    <div class="flex justify-between items-center mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">👨‍🌾</span>
+        <h3 class="text-base font-black text-slate-800">
+          {% trans "Stage 4: Farmer Distributions Issued from this Batch" %} ({{ farmer_distributions|length }})
+        </h3>
+      </div>
+      <span class="text-xs font-bold text-emerald-800">{% trans "Total:" %} {{ total_issued_kg }} kg</span>
+    </div>
+    <div class="overflow-x-auto max-h-96">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+            <th class="p-2.5">{% trans "Receipt Number" %}</th>
+            <th class="p-2.5">{% trans "Farmer Name" %}</th>
+            <th class="p-2.5">{% trans "NIC (Masked)" %}</th>
+            <th class="p-2.5">{% trans "ASC Centre" %}</th>
+            <th class="p-2.5 text-center">{% trans "Quantity" %}</th>
+            <th class="p-2.5 text-center">{% trans "Method" %}</th>
+            <th class="p-2.5">{% trans "Issued By" %}</th>
+            <th class="p-2.5">{% trans "Distributed Timestamp" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dist in farmer_distributions %}
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="p-2.5 font-mono font-bold">
+              <a href="{% url 'distribution_receipt' dist.receipt_number %}" class="text-emerald-700 hover:underline">
+                {{ dist.receipt_number }}
+              </a>
+            </td>
+            <td class="p-2.5 font-medium text-slate-800">{{ dist.farmer.full_name }}</td>
+            <td class="p-2.5 font-mono text-slate-500">{{ dist.farmer.masked_nic }}</td>
+            <td class="p-2.5">{{ dist.asc_centre.name }}</td>
+            <td class="p-2.5 text-center font-black font-mono text-emerald-800">{{ dist.quantity_kg }} kg</td>
+            <td class="p-2.5 text-center">
+              <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
+                {{ dist.get_issue_method_display }}
+              </span>
+            </td>
+            <td class="p-2.5 text-slate-500">{{ dist.issued_by.username|default:"System" }}</td>
+            <td class="p-2.5 text-slate-500 font-mono">{{ dist.distributed_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="p-4 text-center text-slate-400">{% trans "No farmer distributions issued from this batch yet." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Stage 5: Expired Stock Write-Offs (If any) -->
+  {% if write_offs %}
+  <div class="bg-rose-50 border-2 border-rose-200 p-5 rounded-2xl shadow-sm">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-xl">🗑️</span>
+      <h3 class="text-base font-black text-rose-950">
+        {% trans "Stage 5: Expired Stock Write-Offs (Audited Actions)" %}
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs bg-white rounded-xl overflow-hidden">
+        <thead>
+          <tr class="bg-rose-100 text-rose-900 uppercase">
+            <th class="p-2.5">{% trans "ASC Centre" %}</th>
+            <th class="p-2.5 text-center">{% trans "Quantity Written Off" %}</th>
+            <th class="p-2.5">{% trans "Justification / Reason" %}</th>
+            <th class="p-2.5">{% trans "Authorized ASC Head" %}</th>
+            <th class="p-2.5">{% trans "Timestamp" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for wo in write_offs %}
+          <tr class="border-b border-rose-100">
+            <td class="p-2.5 font-bold">{{ wo.stock.asc_centre.name }}</td>
+            <td class="p-2.5 text-center font-black font-mono text-rose-800">{{ wo.quantity_kg }} kg</td>
+            <td class="p-2.5 text-slate-700">{{ wo.notes }}</td>
+            <td class="p-2.5 font-mono">{{ wo.created_by.username|default:"ASC Head" }}</td>
+            <td class="p-2.5 text-slate-500 font-mono">{{ wo.timestamp|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% elif batch_query %}
+  <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
+    <span class="text-4xl block mb-2">🔍</span>
+    <h3 class="text-lg font-bold text-slate-800">{% trans "No matching batch found" %}</h3>
+    <p class="text-xs text-slate-500 mt-1">
+      {% trans "No fertilizer batch matches" %} "<strong>{{ batch_query }}</strong>".
+      {% trans "Please check the batch code or select from the quick list above." %}
+    </p>
+  </div>
+  {% else %}
+  <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
+    <span class="text-4xl block mb-2">🌱</span>
+    <h3 class="text-lg font-bold text-slate-800">{% trans "Enter a Fertilizer Batch Code Above" %}</h3>
+    <p class="text-xs text-slate-500 mt-1">
+      {% trans "You can trace any batch number to view its full chronological journey through warehouses, ASCs, and farmer issues." %}
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

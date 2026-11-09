@@ -32,6 +32,33 @@
     </div>
   </div>
 
+  <!-- Inclusive Service Counter Toolbar (Keypad Phones & No Phone) -->
+  <div class="bg-slate-100 p-3 rounded-2xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs">
+    <div class="flex items-center gap-2 text-slate-700">
+      <span class="text-lg">🤝</span>
+      <span class="font-medium">{% trans "Farmer has basic keypad phone or no phone?" %}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <a
+        href="{% url 'farmer_search' %}"
+        class="bg-white hover:bg-slate-50 text-emerald-800 border border-emerald-400 font-bold px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1"
+      >
+        <span>🔍</span>
+        <span>{% trans "Search NIC & Send SMS" %}</span>
+      </a>
+      <a
+        href="{% url 'pending_assisted_requests' %}"
+        class="{% if pending_assisted_count > 0 %}bg-amber-500 text-slate-950 font-black animate-pulse{% else %}bg-white text-slate-700 border border-slate-300 font-bold{% endif %} px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1"
+      >
+        <span>📝</span>
+        <span>{% trans "Assisted Approvals" %}</span>
+        {% if pending_assisted_count > 0 %}
+        <span class="bg-slate-900 text-amber-300 px-1.5 py-0.2 rounded-full text-2xs">{{ pending_assisted_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+  </div>
+
   <!-- STEP 3: CONFIRMATION SCREEN (Shown after scan/code verification, BEFORE token is redeemed) -->
   {% if verification %}
   <div class="bg-white rounded-2xl shadow-md border-2 border-amber-500 overflow-hidden">

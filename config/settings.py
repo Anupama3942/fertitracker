@@ -39,7 +39,11 @@ CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     'http://localhost:8000',
 ])
 
-DEMO_MODE = True
+DEMO_MODE = env.bool('DEMO_MODE', default=True)
+OTP_SECRET_KEY = env('OTP_SECRET_KEY', default=SECRET_KEY)
+SMS_BACKEND = env('SMS_BACKEND', default='distributions.sms.SimulatedSMSBackend')
+LOW_STOCK_THRESHOLD_BAGS = env.int('LOW_STOCK_THRESHOLD_BAGS', default=10)
+NEAR_EXPIRY_DAYS = env.int('NEAR_EXPIRY_DAYS', default=60)
 
 SESSION_COOKIE_AGE = 900  # 900 seconds (15 miniutes)
 SESSION_SAVE_EVERY_REQUEST = True
@@ -88,6 +92,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',
+                'core.context_processors.app_settings',
             ],
         },
     },

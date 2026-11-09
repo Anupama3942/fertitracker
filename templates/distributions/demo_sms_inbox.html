@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- Demo Notice Banner -->
+  <div class="bg-amber-500 text-slate-950 p-5 rounded-2xl shadow-sm border border-amber-600 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl">📡</span>
+      <div>
+        <h1 class="text-xl font-black tracking-tight">
+          {% trans "DEMO MODE: Simulated SMS Inbox" %}
+        </h1>
+        <p class="text-xs text-slate-900 font-semibold mt-0.5">
+          {% trans "In production, messages are dispatched via a telecom SMS gateway (e.g. Mobitel m-Space, Dialog IdeaMart). For ICT Expo 5.0 demonstration, all messages are captured here in real-time." %}
+        </p>
+      </div>
+    </div>
+    <span class="bg-slate-950 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0">
+      DEMO_MODE=True
+    </span>
+  </div>
+
+  <!-- Filter & Actions Card -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <form method="get" class="flex-1 w-full sm:w-auto flex gap-2">
+      <input
+        type="text"
+        name="phone"
+        value="{{ phone_filter }}"
+        placeholder="{% trans "Filter by mobile number..." %}"
+        class="flex-1 text-sm border-2 border-slate-300 rounded-xl px-4 py-2.5 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+      />
+      <button
+        type="submit"
+        class="bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition"
+      >
+        {% trans "Filter" %}
+      </button>
+      {% if phone_filter %}
+      <a
+        href="{% url 'demo_sms_inbox' %}"
+        class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm px-3 py-2.5 rounded-xl transition flex items-center"
+      >
+        ✕
+      </a>
+      {% endif %}
+    </form>
+
+    <div class="flex gap-2">
+      <a
+        href="{% url 'asc_scanner' %}"
+        class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
+      >
+        <span>📷</span>
+        <span>{% trans "ASC Scanner" %}</span>
+      </a>
+      <a
+        href="{% url 'demo_sms_inbox' %}"
+        class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-1.5"
+      >
+        <span>🔄</span>
+        <span>{% trans "Refresh" %}</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Messages List -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+      <h2 class="font-bold text-slate-800 text-base">
+        💬 {% trans "Recent SMS Outbox Dispatches" %}
+      </h2>
+      <span class="text-xs font-mono font-semibold bg-slate-200 text-slate-800 px-2.5 py-1 rounded-full">
+        {{ sms_messages|length }} {% trans "Messages" %}
+      </span>
+    </div>
+
+    <div class="divide-y divide-slate-100">
+      {% for msg in sms_messages %}
+      <div class="p-5 space-y-2 hover:bg-slate-50/80 transition">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-base text-slate-900">📱 {{ msg.phone_number }}</span>
+            {% if msg.farmer %}
+            <span class="text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded">
+              {{ msg.farmer.full_name }} ({{ msg.farmer.masked_nic }})
+            </span>
+            {% endif %}
+          </div>
+          <span class="text-xs font-mono text-slate-500">
+            🕒 {{ msg.created_at|date:"Y-m-d H:i:s" }}
+          </span>
+        </div>
+
+        <div class="bg-slate-900 text-emerald-300 font-mono text-sm p-4 rounded-xl border border-slate-800 shadow-inner">
+          {{ msg.message }}
+        </div>
+      </div>
+      {% empty %}
+      <div class="p-8 text-center text-slate-500 space-y-2">
+        <span class="text-3xl block">📭</span>
+        <p class="font-bold text-base text-slate-700">{% trans "No SMS messages sent yet." %}</p>
+        <p class="text-xs text-slate-500">{% trans "Search a farmer under Farmer Search and click 'Send SMS Code' to test the simulation." %}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

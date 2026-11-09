@@ -18,17 +18,27 @@
       </p>
     </div>
 
-    <!-- Summary KPI Badges -->
-    <div class="flex items-center gap-3">
-      <div class="bg-amber-50 border border-amber-300 p-3 rounded-xl text-center min-w-[110px]">
-        <span class="text-xs font-bold text-amber-800 uppercase block">{% trans "Total Damaged" %}</span>
-        <span class="text-2xl font-black text-amber-900 font-mono">{{ total_damaged }}</span>
-        <span class="text-[11px] text-amber-700 block">{% trans "Bags" %}</span>
+    <!-- Summary KPI Badges & Export -->
+    <div class="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-50 border border-amber-300 p-3 rounded-xl text-center min-w-[100px]">
+          <span class="text-xs font-bold text-amber-800 uppercase block">{% trans "Damaged" %}</span>
+          <span class="text-2xl font-black text-amber-900 font-mono">{{ total_damaged }}</span>
+          <span class="text-[11px] text-amber-700 block">{% trans "Bags" %}</span>
+        </div>
+        <div class="bg-rose-50 border border-rose-300 p-3 rounded-xl text-center min-w-[100px]">
+          <span class="text-xs font-bold text-rose-800 uppercase block">{% trans "Missing" %}</span>
+          <span class="text-2xl font-black text-rose-900 font-mono">{{ total_missing }}</span>
+          <span class="text-[11px] text-rose-700 block">{% trans "Bags" %}</span>
+        </div>
       </div>
-      <div class="bg-rose-50 border border-rose-300 p-3 rounded-xl text-center min-w-[110px]">
-        <span class="text-xs font-bold text-rose-800 uppercase block">{% trans "Total Missing" %}</span>
-        <span class="text-2xl font-black text-rose-900 font-mono">{{ total_missing }}</span>
-        <span class="text-[11px] text-rose-700 block">{% trans "Bags" %}</span>
+      <div class="flex gap-2 print:hidden">
+        <a href="?asc={{ selected_asc }}&start_date={{ start_date }}&end_date={{ end_date }}&export=csv" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow transition">
+          📥 {% trans "Export CSV" %}
+        </a>
+        <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow transition">
+          🖨️ {% trans "Print / PDF" %}
+        </button>
       </div>
     </div>
   </div>

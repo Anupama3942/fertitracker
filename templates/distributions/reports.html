@@ -1,153 +1,254 @@
 {% extends 'base.html' %}
+{% load i18n %}
+
 {% block content %}
 <div class="space-y-6">
-    <!-- Header & Export Buttons -->
-    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-800">System Reports, Search & Export</h1>
-            <p class="text-sm text-slate-500">Filter by Farmer NIC, Batch Number, Receipt, or Date and export to CSV or PDF.</p>
-        </div>
-        <div class="flex gap-2 print:hidden">
-            <a href="{% url 'export_report_csv' %}?type={{ report_type }}&q={{ q }}&date={{ date_filter }}" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-4 py-2 rounded shadow">
-                📥 Export CSV ({{ report_type|title }})
-            </a>
-            <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded shadow">
-                🖨️ Print / Save PDF
-            </button>
-        </div>
+
+  <!-- Header & Export Buttons -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">📊</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "System Reports & Supply Chain Intelligence" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Filter and analyze distributions, ASC stock expiry (FEFO), and warehouse dispatches." %}
+      </p>
     </div>
 
-    <!-- Search & Filter Bar -->
-    <form method="get" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 print:hidden">
-        <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Report Category</label>
-            <select name="type" class="w-full border rounded px-3 py-2 text-sm">
-                <option value="distributions" {% if report_type == 'distributions' %}selected{% endif %}>Farmer Distributions</option>
-                <option value="stocks" {% if report_type == 'stocks' %}selected{% endif %}>ASC Stock & Expiry (FEFO)</option>
-                <option value="dispatches" {% if report_type == 'dispatches' %}selected{% endif %}>Dispatches & Discrepancies</option>
-            </select>
-        </div>
-        <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Search (NIC / Batch No / Receipt)</label>
-            <input type="text" name="q" value="{{ q }}" placeholder="e.g. 198512345678 or BATCH-01" class="w-full border rounded px-3 py-2 text-sm">
-        </div>
-        <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Filter by Date</label>
-            <input type="date" name="date" value="{{ date_filter }}" class="w-full border rounded px-3 py-2 text-sm">
-        </div>
-        <div class="flex items-end gap-2">
-            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-4 py-2 rounded text-sm w-full">Search & Filter</button>
-            <a href="{% url 'reports_search' %}" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-2 rounded text-sm">Reset</a>
-        </div>
+    <div class="flex flex-wrap gap-2 print:hidden">
+      <a
+        href="{% url 'export_report_csv' %}?type={{ report_type }}&q={{ q }}&date={{ date_filter }}&asc={{ asc_id }}&season={{ season_id }}&product={{ product_id }}&issue_method={{ issue_method }}&status={{ status_filter }}"
+        class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
+      >
+        📥 {% trans "Export CSV" %} ({{ report_type|title }})
+      </a>
+      <button
+        onclick="window.print()"
+        class="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
+      >
+        🖨️ {% trans "Print / Save PDF" %}
+      </button>
+      <a
+        href="{% url 'batch_traceability' %}"
+        class="bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
+      >
+        🔍 {% trans "Batch Traceability" %}
+      </a>
+    </div>
+  </div>
+
+  <!-- Multi-Parameter Filter Form -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs items-end">
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "Report Type" %}</label>
+        <select name="type" class="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800 outline-none focus:border-emerald-600">
+          <option value="distributions" {% if report_type == 'distributions' %}selected{% endif %}>👨‍🌾 {% trans "Farmer Distributions" %}</option>
+          <option value="stocks" {% if report_type == 'stocks' %}selected{% endif %}>🏬 {% trans "ASC Stock & Expiry (FEFO)" %}</option>
+          <option value="dispatches" {% if report_type == 'dispatches' %}selected{% endif %}>🚚 {% trans "Dispatches to ASCs" %}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "Search (NIC / Batch / Ref)" %}</label>
+        <input
+          type="text"
+          name="q"
+          value="{{ q }}"
+          placeholder="{% trans 'e.g. 1985... or BATCH-01' %}"
+          class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600"
+        />
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "ASC Centre" %}</label>
+        <select name="asc" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600">
+          <option value="">{% trans "All ASC Centres" %}</option>
+          {% for a in asc_centres %}
+          <option value="{{ a.id }}" {% if asc_id == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">{% trans "Season" %}</label>
+        <select name="season" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-600">
+          <option value="">{% trans "All Seasons" %}</option>
+          {% for s in seasons %}
+          <option value="{{ s.id }}" {% if season_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition">
+          🔍 {% trans "Filter" %}
+        </button>
+        <a href="{% url 'reports_search' %}?type={{ report_type }}" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-3 rounded-lg text-xs transition">
+          {% trans "Reset" %}
+        </a>
+      </div>
     </form>
+  </div>
 
-    <!-- 1. Farmer Distributions Table -->
-    {% if report_type == 'distributions' %}
-    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-        <h2 class="text-lg font-bold text-slate-800 mb-3">Farmer Distribution Report ({{ distributions|length }})</h2>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-sm">
-                <thead>
-                    <tr class="bg-slate-100 border-b">
-                        <th class="p-2.5">Receipt</th>
-                        <th class="p-2.5">Farmer</th>
-                        <th class="p-2.5">NIC (Masked)</th>
-                        <th class="p-2.5">ASC Centre</th>
-                        <th class="p-2.5">Batch No</th>
-                        <th class="p-2.5">Qty</th>
-                        <th class="p-2.5">Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for dist in distributions %}
-                    <tr class="border-b">
-                        <td class="p-2.5 font-mono text-xs font-bold">
-                            <a href="{% url 'distribution_receipt' dist.receipt_number %}" class="text-emerald-700 hover:underline">{{ dist.receipt_number }}</a>
-                        </td>
-                        <td class="p-2.5">{{ dist.farmer.full_name }}</td>
-                        <td class="p-2.5 font-mono text-xs">{{ dist.farmer.masked_nic }}</td>
-                        <td class="p-2.5">{{ dist.asc_centre.name }}</td>
-                        <td class="p-2.5 font-mono text-xs">{{ dist.batch.batch_number }}</td>
-                        <td class="p-2.5 font-bold text-emerald-700">{{ dist.quantity_kg }} kg</td>
-                        <td class="p-2.5 text-xs text-slate-500">{{ dist.distributed_at|date:"Y-m-d H:i" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" class="p-4 text-center text-slate-500">No matching distribution records found.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- 1. Farmer Distributions Table -->
+  {% if report_type == 'distributions' %}
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <h2 class="text-sm font-bold text-slate-800">
+        {% trans "Farmer Distribution Ledger" %} ({{ distributions|length }})
+      </h2>
+      <span class="text-xs text-slate-500">{% trans "Audited transactions with row-level locks" %}</span>
     </div>
-    {% endif %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+            <th class="p-3">{% trans "Receipt" %}</th>
+            <th class="p-3">{% trans "Farmer" %}</th>
+            <th class="p-3">{% trans "NIC (Masked)" %}</th>
+            <th class="p-3">{% trans "ASC Centre" %}</th>
+            <th class="p-3">{% trans "Batch No" %}</th>
+            <th class="p-3 text-center">{% trans "Quantity" %}</th>
+            <th class="p-3 text-center">{% trans "Method" %}</th>
+            <th class="p-3">{% trans "Season" %}</th>
+            <th class="p-3">{% trans "Date & Time" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dist in distributions %}
+          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-3 font-mono font-bold">
+              <a href="{% url 'distribution_receipt' dist.receipt_number %}" class="text-emerald-700 hover:underline">
+                {{ dist.receipt_number }}
+              </a>
+            </td>
+            <td class="p-3 font-medium text-slate-900">{{ dist.farmer.full_name }}</td>
+            <td class="p-3 font-mono text-slate-500">{{ dist.farmer.masked_nic }}</td>
+            <td class="p-3">{{ dist.asc_centre.name }}</td>
+            <td class="p-3 font-mono font-semibold text-slate-700">
+              <a href="{% url 'batch_traceability' %}?batch_number={{ dist.batch.batch_number }}" class="hover:underline text-indigo-700">
+                {{ dist.batch.batch_number }}
+              </a>
+            </td>
+            <td class="p-3 text-center font-black font-mono text-emerald-800">{{ dist.quantity_kg }} kg</td>
+            <td class="p-3 text-center">
+              <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
+                {{ dist.get_issue_method_display }}
+              </span>
+            </td>
+            <td class="p-3 text-slate-500">{{ dist.season.name }}</td>
+            <td class="p-3 text-slate-500 font-mono">{{ dist.distributed_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="p-6 text-center text-slate-400">{% trans "No matching distribution records found." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 
-    <!-- 2. ASC Stock & FEFO Expiry Report -->
-    {% if report_type == 'stocks' %}
-    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-        <h2 class="text-lg font-bold text-slate-800 mb-3">ASC Stock & FEFO Expiry Report ({{ stocks|length }})</h2>
-        <table class="w-full text-left border-collapse text-sm">
-            <thead>
-                <tr class="bg-slate-100 border-b">
-                    <th class="p-2.5">ASC Centre</th>
-                    <th class="p-2.5">Product</th>
-                    <th class="p-2.5">Batch Number</th>
-                    <th class="p-2.5">Expiry Date (FEFO)</th>
-                    <th class="p-2.5">Bags on Hand</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for st in stocks %}
-                <tr class="border-b">
-                    <td class="p-2.5 font-medium">{{ st.asc_centre.name }}</td>
-                    <td class="p-2.5">{{ st.batch.product.name }}</td>
-                    <td class="p-2.5 font-mono text-xs">{{ st.batch.batch_number }}</td>
-                    <td class="p-2.5 font-mono text-xs">{{ st.batch.expiry_date }}</td>
-                    <td class="p-2.5 font-bold {% if st.bags_on_hand < 10 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ st.bags_on_hand }} bags</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="p-4 text-center text-slate-500">No stock records found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <!-- 2. ASC Stock & FEFO Expiry Report -->
+  {% if report_type == 'stocks' %}
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <h2 class="text-sm font-bold text-slate-800">
+        {% trans "ASC Stock Balances & FEFO Expiry Status" %} ({{ stocks|length }})
+      </h2>
+      <span class="text-xs text-slate-500">{% trans "Ranked by earliest expiry date" %}</span>
     </div>
-    {% endif %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+            <th class="p-3">{% trans "ASC Centre" %}</th>
+            <th class="p-3">{% trans "Product" %}</th>
+            <th class="p-3">{% trans "Batch Number" %}</th>
+            <th class="p-3">{% trans "Expiry Date" %}</th>
+            <th class="p-3 text-center">{% trans "Bags on Hand" %}</th>
+            <th class="p-3 text-center">{% trans "Total Weight" %}</th>
+            <th class="p-3 text-center">{% trans "Health Status" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for st in stocks %}
+          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-3 font-medium text-slate-900">{{ st.asc_centre.name }}</td>
+            <td class="p-3 font-semibold text-slate-800">{{ st.batch.product.name }}</td>
+            <td class="p-3 font-mono font-bold">
+              <a href="{% url 'batch_traceability' %}?batch_number={{ st.batch.batch_number }}" class="text-indigo-700 hover:underline">
+                {{ st.batch.batch_number }}
+              </a>
+            </td>
+            <td class="p-3 font-mono text-slate-600">{{ st.batch.expiry_date }}</td>
+            <td class="p-3 text-center font-black font-mono text-purple-900">{{ st.bags_on_hand }}</td>
+            <td class="p-3 text-center font-mono font-bold">{{ st.total_weight_kg }} kg</td>
+            <td class="p-3 text-center">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ st.health_color }}">
+                {{ st.health_badge }}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="p-6 text-center text-slate-400">{% trans "No ASC stock records found." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 
-    <!-- 3. Dispatches & Discrepancies Report -->
-    {% if report_type == 'dispatches' %}
-    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-        <h2 class="text-lg font-bold text-slate-800 mb-3">Warehouse-to-ASC Dispatches & Discrepancy Report ({{ dispatches|length }})</h2>
-        <table class="w-full text-left border-collapse text-sm">
-            <thead>
-                <tr class="bg-slate-100 border-b">
-                    <th class="p-2.5">Ref</th>
-                    <th class="p-2.5">ASC Centre</th>
-                    <th class="p-2.5">Batch</th>
-                    <th class="p-2.5">Dispatched</th>
-                    <th class="p-2.5">Good / Damaged</th>
-                    <th class="p-2.5">Status</th>
-                    <th class="p-2.5">Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for d in dispatches %}
-                <tr class="border-b">
-                    <td class="p-2.5 font-mono text-xs font-bold">{{ d.dispatch_reference }}</td>
-                    <td class="p-2.5">{{ d.asc_centre.name }}</td>
-                    <td class="p-2.5 font-mono text-xs">{{ d.batch.batch_number }}</td>
-                    <td class="p-2.5">{{ d.dispatched_bags }} bags</td>
-                    <td class="p-2.5">{{ d.received_good_bags }} / <span class="text-red-600 font-bold">{{ d.damaged_bags }}</span></td>
-                    <td class="p-2.5">
-                        <span class="px-2 py-0.5 rounded text-xs font-bold {% if d.status == 'DISCREPANCY' %}bg-red-100 text-red-800{% elif d.status == 'RECEIVED' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
-                            {{ d.status }}
-                        </span>
-                    </td>
-                    <td class="p-2.5 text-xs text-slate-500">{{ d.dispatched_at|date:"Y-m-d" }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="7" class="p-4 text-center text-slate-500">No dispatch records found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <!-- 3. Dispatches Report -->
+  {% if report_type == 'dispatches' %}
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <h2 class="text-sm font-bold text-slate-800">
+        {% trans "Warehouse to ASC Dispatches" %} ({{ dispatches|length }})
+      </h2>
+      <span class="text-xs text-slate-500">{% trans "Track manifests and receiving status" %}</span>
     </div>
-    {% endif %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase">
+            <th class="p-3">{% trans "Dispatch Ref" %}</th>
+            <th class="p-3">{% trans "Warehouse" %}</th>
+            <th class="p-3">{% trans "Destination ASC" %}</th>
+            <th class="p-3">{% trans "Status" %}</th>
+            <th class="p-3">{% trans "Date Dispatched" %}</th>
+            <th class="p-3 text-right">{% trans "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in dispatches %}
+          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-3 font-mono font-bold">{{ d.dispatch_reference }}</td>
+            <td class="p-3">{{ d.warehouse.name }}</td>
+            <td class="p-3 font-medium">{{ d.asc_centre.name }}</td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if d.status == 'RECEIVED' %}bg-emerald-100 text-emerald-800{% elif d.status == 'RECEIVED_WITH_DISCREPANCY' %}bg-rose-100 text-rose-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                {{ d.get_status_display }}
+              </span>
+            </td>
+            <td class="p-3 text-slate-500 font-mono">{{ d.dispatched_at|date:"Y-m-d H:i" }}</td>
+            <td class="p-3 text-right">
+              <a href="{% url 'receive_dispatch' d.id %}" class="text-emerald-700 hover:underline font-bold">
+                {% trans "Manifest" %} &rarr;
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="p-6 text-center text-slate-400">{% trans "No dispatches found matching filters." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

@@ -452,3 +452,76 @@ msgstr "රිසිට්පත බලන්න"
 
 msgid "No fertilizer distributions recorded yet."
 msgstr "තවමත් පොහොර නිකුත් කිරීම් සිදු කර නොමැත."
+
+msgid "Find Farmer"
+msgstr "ගොවියා සොයන්න"
+
+msgid "Assisted"
+msgstr "නිලධාරි සහය"
+
+msgid "Assisted Report"
+msgstr "සහය නිකුත් වාර්තාව"
+
+msgid "Farmer Search (SMS & Assisted Issue)"
+msgstr "ගොවි සෙවීම (SMS සහ නිලධාරි සහය නිකුතුව)"
+
+msgid "Search by NIC or Name for farmers who cannot present a smartphone QR code."
+msgstr "ස්මාර්ට්ෆෝන් QR කේතයක් ඉදිරිපත් කළ නොහැකි ගොවීන් සඳහා ජා.හැ.අංකය හෝ නම මඟින් සොයන්න."
+
+msgid "Send SMS Code"
+msgstr "SMS කේතය යවන්න"
+
+msgid "Assisted Issue"
+msgstr "නිලධාරි සහය නිකුතුව"
+
+msgid "Officer-Assisted Issue Request"
+msgstr "නිලධාරි සහය පොහොර නිකුත් කිරීමේ ඉල්ලීම"
+
+msgid "DEMO MODE: Simulated SMS Inbox"
+msgstr "ප්‍රදර්ශන මාදිලිය: අනුකරණය කරන ලද SMS පෙට්ටිය"
+
+msgid "Assisted Issue Authorizations"
+msgstr "නිලධාරි සහය නිකුත් කිරීම් අනුමත කිරීම්"
+
+msgid "Officer-Assisted Issues Audit Report"
+msgstr "නිලධාරි සහය නිකුත් කිරීම් විගණන වාර්තාව"
+
+msgid "Two-Officer Approver"
+msgstr "ද්විත්ව නිලධාරි අනුමැතිය (ASC ප්‍රධානී)"
+
+msgid "Verification Channel"
+msgstr "තහවුරු කිරීමේ ක්‍රමය"
+
+msgid "Back to Scanner"
+msgstr "නැවත ස්කෑනරය වෙත"
+
+msgid "Assisted Approvals"
+msgstr "සහය අනුමැතීන්"
+
+msgid "Approved Requests — Ready for Issue at Counter"
+msgstr "අනුමත වූ ඉල්ලීම් — කවුන්ටරයෙන් නිකුත් කිරීමට සූදානම්"
+
+msgid "Pending Secondary Approvals (ASC Head)"
+msgstr "අනුමැතිය අපේක්ෂිත ඉල්ලීම් (ගොවිජන සේවා ප්‍රධානී)"
+
+msgid "Confirm Officer-Assisted Issue"
+msgstr "නිලධාරි සහය පොහොර නිකුතුව තහවුරු කරන්න"
+
+msgid "Total Distributions"
+msgstr "මුළු නිකුත් කිරීම්"
+
+msgid "Assisted Issues (Exceptions)"
+msgstr "නිලධාරි සහය නිකුත් කිරීම්"
+
+msgid "Assisted Ratio (%)"
+msgstr "සහය නිකුත් කිරීම් ප්‍රතිශතය (%)"
+
+msgid "Breakdown by Exception Reason"
+msgstr "හේතු අනුව වර්ගීකරණය"
+
+msgid "Officer Exception Pattern Ratio"
+msgstr "නිලධාරී අනුව සහය නිකුත් කිරීම් අනුපාතය"
+
+msgid "Recent Officer-Assisted Distributions Log"
+msgstr "මෑතකාලීන නිලධාරි සහය නිකුත් කිරීම් සටහන"
+

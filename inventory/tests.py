@@ -192,3 +192,75 @@ class ReceivingAndReconciliationTests(TestCase):
         # Should redirect back with error message
         self.dispatch.refresh_from_db()
         self.assertEqual(self.dispatch.status, StockDispatch.StatusChoices.DISPATCHED)
+
+
+from django.test import TransactionTestCase
+import threading
+
+class DispatchConcurrencyTransactionTests(TransactionTestCase):
+    """
+    Concurrency test verifying that two simultaneous receiving transactions
+    cannot double-receive the same dispatch under PostgreSQL select_for_update() locking.
+    """
+    def setUp(self):
+        self.asc = ASCCentre.objects.create(name="Vavuniya South ASC", district="Vavuniya", address="Kandy Rd")
+        self.warehouse = Warehouse.objects.create(name="Colombo Port Warehouse", location="Colombo")
+        self.product = FertilizerProduct.objects.create(name="Urea", bag_weight_kg=Decimal("50.00"))
+        self.officer = User.objects.create_user(
+            username="concurrent_officer", password="Password123!",
+            role=User.RoleChoices.ASC_OFFICER, asc_centre=self.asc
+        )
+        self.batch = FertilizerBatch.objects.create(
+            warehouse=self.warehouse, product=self.product,
+            batch_number="CONCURRENT-BATCH-1", expiry_date=date(2027, 12, 31)
+        )
+        self.dispatch = StockDispatch.objects.create(
+            warehouse=self.warehouse, asc_centre=self.asc, created_by=self.officer
+        )
+        self.item = DispatchItem.objects.create(
+            dispatch=self.dispatch, batch=self.batch, dispatched_bags=50
+        )
+
+    def test_concurrent_dispatch_receiving_prevented(self):
+        """
+        Two concurrent threads execute confirm_dispatch_receiving simultaneously.
+        Result: Exactly one succeeds; the second receives ValidationError.
+        Stock bags_on_hand is incremented exactly once.
+        """
+        results = []
+        errors = []
+
+        def worker():
+            from django.db import connection
+            try:
+                # Open separate database connection for thread
+                res = confirm_dispatch_receiving(
+                    dispatch_id=self.dispatch.id,
+                    officer_user=self.officer,
+                    received_bags_dict={str(self.item.id): 50},
+                    damaged_bags_dict={str(self.item.id): 0}
+                )
+                results.append(res)
+            except Exception as e:
+                errors.append(e)
+            finally:
+                connection.close()
+
+        t1 = threading.Thread(target=worker)
+        t2 = threading.Thread(target=worker)
+
+        t1.start()
+        t2.start()
+
+        t1.join()
+        t2.join()
+
+        # Exactly one thread succeeds
+        self.assertEqual(len(results), 1, "Exactly one receiving transaction must succeed.")
+        self.assertEqual(len(errors), 1, "The competing transaction must be rejected by row-level locking.")
+        self.assertIn("already been received", str(errors[0]))
+
+        # Stock is incremented exactly once by 50 bags
+        stock = ASCStock.objects.get(asc_centre=self.asc, batch=self.batch)
+        self.assertEqual(stock.bags_on_hand, 50)
+

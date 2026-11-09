@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from accounts.decorators import role_required
@@ -33,12 +34,15 @@ def inventory_list_view(request):
             stock.expiry_label = ''
             stock.expiry_badge_class = ''
 
+    is_asc_head = getattr(user, 'is_asc_head', False) or user.role == 'ADMIN' or user.is_superuser
+
     context = {
         'dispatches': dispatches,
         'stocks': stocks,
         'batches': FertilizerBatch.objects.select_related('warehouse', 'product').order_by('expiry_date'),
         'today': today,
         'near_expiry_threshold': near_expiry_threshold,
+        'is_asc_head': is_asc_head,
     }
     return render(request, 'inventory/inventory_list.html', context)
 
@@ -165,8 +169,29 @@ def discrepancy_report_view(request):
     if end_date:
         discrepancies = discrepancies.filter(created_at__date__lte=end_date)
 
-    total_damaged = sum(d.damaged_bags for d in discrepancies)
-    total_missing = sum(d.missing_bags for d in discrepancies)
+    if request.GET.get('export') == 'csv':
+        import csv
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="fertitracker_discrepancy_report.csv"'
+        response.write('\ufeff')
+        writer = csv.writer(response)
+        writer.writerow([
+            'Dispatch Reference', 'Warehouse', 'ASC Centre', 'Recorded By',
+            'Damaged Bags', 'Missing Bags', 'Total Discrepant Bags', 'Reason / Note', 'Recorded Date'
+        ])
+        for d in discrepancies:
+            writer.writerow([
+                d.dispatch.dispatch_reference,
+                d.dispatch.warehouse.name,
+                d.dispatch.asc_centre.name,
+                d.recorded_by.username if d.recorded_by else 'System',
+                d.damaged_bags,
+                d.missing_bags,
+                d.damaged_bags + d.missing_bags,
+                d.reason,
+                d.created_at.strftime('%Y-%m-%d %H:%M')
+            ])
+        return response
 
     context = {
         'discrepancies': discrepancies,
@@ -178,3 +203,37 @@ def discrepancy_report_view(request):
         'total_missing': total_missing,
     }
     return render(request, 'inventory/discrepancy_report.html', context)
+
+
+@role_required('ADMIN', 'ASC_OFFICER')
+def write_off_expired_stock_view(request, stock_id):
+    """
+    Expired Stock Write-Off Action (ASC Head & Admin only).
+    Deducts expired bags using an append-only WRITE_OFF StockMovement and AuditLog.
+    """
+    if request.method != 'POST':
+        return redirect('inventory_list')
+
+    reason = request.POST.get('reason', '').strip()
+    bags_input = request.POST.get('bags')
+    bags_to_write_off = int(bags_input) if bags_input and bags_input.isdigit() else None
+
+    from .services import write_off_expired_stock
+    try:
+        movement = write_off_expired_stock(
+            stock_id=stock_id,
+            head_user=request.user,
+            reason=reason,
+            bags_to_write_off=bags_to_write_off
+        )
+        messages.success(
+            request,
+            f"Successfully written off {movement.notes} for Batch {movement.stock.batch.batch_number}."
+        )
+    except ValidationError as e:
+        messages.error(request, e.message)
+    except Exception as e:
+        messages.error(request, str(e))
+
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'inventory_list'
+    return redirect(next_url)

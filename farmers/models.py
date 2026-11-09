@@ -42,32 +42,49 @@ class FarmerEntitlement(models.Model):
         return f"{self.farmer.full_name} | {self.season.name} | {self.product.name}: {self.remaining_kg}/{self.approved_kg} kg"
 
 
+import hmac
+from django.conf import settings
+
+def compute_code_hmac(raw_code: str) -> str:
+    """Compute HMAC-SHA256 of a 6-digit code using the server's OTP secret key."""
+    secret = getattr(settings, 'OTP_SECRET_KEY', getattr(settings, 'SECRET_KEY', 'fertitracker-secret')).encode('utf-8')
+    return hmac.new(secret, str(raw_code).strip().encode('utf-8'), hashlib.sha256).hexdigest()
+
 class QRToken(models.Model):
+    class ChannelChoices(models.TextChoices):
+        QR = 'QR', 'QR Code'
+        SMS = 'SMS', 'SMS Code'
+
     farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name='qr_tokens')
-    token_hash = models.CharField(max_length=255, unique=True)  # Store only a hash of the QR data on the server.
-    code_hash = models.CharField(max_length=255, null=True, blank=True)  # Hashed 6-digit backup code
+    asc_centre = models.ForeignKey('core.ASCCentre', on_delete=models.CASCADE, null=True, blank=True, related_name='qr_tokens')
+    channel = models.CharField(max_length=20, choices=ChannelChoices.choices, default=ChannelChoices.QR)
+    token_hash = models.CharField(max_length=255, unique=True)  # Store SHA-256 of 64-char QR token
+    code_hash = models.CharField(max_length=255, null=True, blank=True)  # HMAC-SHA256 keyed hash of 6-digit backup code
     expires_at = models.DateTimeField()
     is_redeemed = models.BooleanField(default=False)
+    failed_attempts = models.PositiveIntegerField(default=0)
 
     @classmethod
-    def generate_token_for_farmer(cls, farmer):
+    def generate_token_for_farmer(cls, farmer, asc_centre=None, channel='QR', expiry_seconds=60):
         """
-        Generate a dynamic opaque token that expires in 60 seconds and store its cryptographic hash (FR-10, Section 11.2).
-        Also generates a 6-digit backup code tied to the same token.
+        Generate a dynamic opaque token and HMAC-keyed 6-digit backup code.
+        Can be bound to a specific ASC and channel (QR or SMS).
         """
         import uuid
         import random
         raw_token = uuid.uuid4().hex + uuid.uuid4().hex
         hashed_token = hashlib.sha256(raw_token.encode()).hexdigest()
         raw_code = f"{random.randint(100000, 999999)}"
-        hashed_code = hashlib.sha256(raw_code.encode()).hexdigest()
-        expiry = timezone.now() + timedelta(seconds=60)  # Set a 60-second lifetime.
+        hashed_code = compute_code_hmac(raw_code)
+        expiry = timezone.now() + timedelta(seconds=expiry_seconds)
 
-        # Invalidate any previous unused tokens for this farmer.
-        cls.objects.filter(farmer=farmer, is_redeemed=False).update(is_redeemed=True)
+        # Invalidate any previous unused tokens for this farmer on this channel
+        cls.objects.filter(farmer=farmer, channel=channel, is_redeemed=False).update(is_redeemed=True)
 
         obj = cls.objects.create(
             farmer=farmer,
+            asc_centre=asc_centre,
+            channel=channel,
             token_hash=hashed_token,
             code_hash=hashed_code,
             expires_at=expiry
@@ -75,10 +92,17 @@ class QRToken(models.Model):
         return raw_token, raw_code, obj
 
     def is_valid(self):
-        """Return whether the token is unused and has not expired."""
-        return not self.is_redeemed and timezone.now() <= self.expires_at
+        """Return whether the token is unused, unexpired, and not locked out."""
+        return not self.is_redeemed and timezone.now() <= self.expires_at and self.failed_attempts < 5
+
+    def record_failed_attempt(self):
+        """Track wrong entry attempts against this specific token."""
+        self.failed_attempts += 1
+        if self.failed_attempts >= 5:
+            self.is_redeemed = True  # Invalidate token after 5 failed attempts
+        self.save(update_fields=['failed_attempts', 'is_redeemed'])
 
     def __str__(self):
         """Return a readable description of the token and its current status."""
-        status = "Redeemed" if self.is_redeemed else ("Expired" if timezone.now() > self.expires_at else "Active")
-        return f"QR for {self.farmer.full_name} [{status}]"
+        status = "Redeemed" if self.is_redeemed else ("Expired" if timezone.now() > self.expires_at else ("Locked" if self.failed_attempts >= 5 else "Active"))
+        return f"{self.channel} for {self.farmer.full_name} [{status}]"

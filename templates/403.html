@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto my-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center space-y-5">
+  <div class="inline-flex p-4 rounded-full bg-rose-100 text-rose-800 text-5xl">
+    🔒
+  </div>
+  
+  <h1 class="text-3xl font-black text-slate-800">
+    403 &bull; {% trans "Access Restricted" %}
+  </h1>
+
+  <div class="space-y-3 text-slate-600 text-sm md:text-base">
+    <p>
+      {% trans "You do not have permission to view this page or perform this operation." %}
+    </p>
+    <p class="text-xs text-slate-500 font-sans border-t border-slate-100 pt-3">
+      <strong>සිංහල:</strong> මෙම පිටුවට ප්‍රවේශ වීමට ඔබට අවසර නොමැත. කරුණාකර ඔබගේ ගිණුමේ භූමිකාව (Role) පරීක්ෂා කරන්න.<br>
+      <strong>தமிழ்:</strong> இந்தப் பக்கத்தை அணுக உங்களுக்கு அனுமதி இல்லை. உங்கள் பயனர் கணக்கின் பங்கை சரிபார்க்கவும்.
+    </p>
+  </div>
+
+  <div class="pt-4 flex justify-center gap-3">
+    <a href="{% url 'dashboard' %}" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-2.5 rounded-xl shadow transition text-sm">
+      🏠 {% trans "Return to Dashboard" %}
+    </a>
+  </div>
+</div>
+{% endblock %}

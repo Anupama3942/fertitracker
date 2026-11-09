@@ -452,3 +452,76 @@ msgstr "ரசீதைப் பார்"
 
 msgid "No fertilizer distributions recorded yet."
 msgstr "இதுவரை உரம் வழங்கப்படவில்லை."
+
+msgid "Find Farmer"
+msgstr "விவசாயியைத் தேடு"
+
+msgid "Assisted"
+msgstr "உதவி வழங்கல்"
+
+msgid "Assisted Report"
+msgstr "உதவி வழங்கல் அறிக்கை"
+
+msgid "Farmer Search (SMS & Assisted Issue)"
+msgstr "விவசாயி தேடல் (SMS & உதவி வழங்கல்)"
+
+msgid "Search by NIC or Name for farmers who cannot present a smartphone QR code."
+msgstr "ஸ்மார்ட்போன் QR குறியீடு இல்லாத விவசாயிகளை அடையாள அட்டை எண் அல்லது பெயரால் தேடுங்கள்."
+
+msgid "Send SMS Code"
+msgstr "SMS குறியீடு அனுப்பு"
+
+msgid "Assisted Issue"
+msgstr "அலுவலர் உதவி வழங்கல்"
+
+msgid "Officer-Assisted Issue Request"
+msgstr "அலுவலர் உதவி உர வழங்கல் கோரிக்கை"
+
+msgid "DEMO MODE: Simulated SMS Inbox"
+msgstr "டெமோ முறை: உருவகப்படுத்தப்பட்ட SMS இன்பாக்ஸ்"
+
+msgid "Assisted Issue Authorizations"
+msgstr "உதவி உர வழங்கல் அங்கீகாரங்கள்"
+
+msgid "Officer-Assisted Issues Audit Report"
+msgstr "உதவி உர வழங்கல் தணிக்கை அறிக்கை"
+
+msgid "Two-Officer Approver"
+msgstr "இரு அலுவலர் ஒப்புதல் (ASC தலைவர்)"
+
+msgid "Verification Channel"
+msgstr "சரிபார்ப்பு முறை"
+
+msgid "Back to Scanner"
+msgstr "மீண்டும் ஸ்கேனருக்கு"
+
+msgid "Assisted Approvals"
+msgstr "உதவி ஒப்புதல்கள்"
+
+msgid "Approved Requests — Ready for Issue at Counter"
+msgstr "அங்கீகரிக்கப்பட்ட கோரிக்கைகள் — வழங்க தயாராக உள்ளது"
+
+msgid "Pending Secondary Approvals (ASC Head)"
+msgstr "நிலுவையிலுள்ள இரண்டாம் நிலை ஒப்புதல்கள் (ASC தலைவர்)"
+
+msgid "Confirm Officer-Assisted Issue"
+msgstr "உதவி உர வழங்கலை உறுதிப்படுத்துக"
+
+msgid "Total Distributions"
+msgstr "மொத்த வழங்கல்கள்"
+
+msgid "Assisted Issues (Exceptions)"
+msgstr "உதவி உர வழங்கல்கள்"
+
+msgid "Assisted Ratio (%)"
+msgstr "உதவி வழங்கல் விகிதம் (%)"
+
+msgid "Breakdown by Exception Reason"
+msgstr "காரண வாரியான பகுப்பாய்வு"
+
+msgid "Officer Exception Pattern Ratio"
+msgstr "அலுவலர் வாரியான வழங்கல் விகிதம்"
+
+msgid "Recent Officer-Assisted Distributions Log"
+msgstr "சமீபத்திய உதவி உர வழங்கல் பதிவு"
+
