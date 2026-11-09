@@ -21,6 +21,11 @@ from accounts.decorators import role_required
 
 # Create your views here.
 
+def home_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return redirect('login')
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
