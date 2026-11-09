@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -22,9 +23,21 @@ class Command(BaseCommand):
             action='store_true',
             help='Purge existing demo data before seeding new records.',
         )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Force seeding even if DEMO_MODE is not enabled in settings.',
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
+        # DEMO_MODE Safeguard
+        if not getattr(settings, 'DEMO_MODE', False) and not options.get('force'):
+            raise CommandError(
+                "seed_demo_data is restricted to environments where DEMO_MODE=True in .env/settings. "
+                "Use --force to override this safeguard."
+            )
+
         reset = options.get('reset', False)
 
         if reset:
@@ -95,7 +108,7 @@ class Command(BaseCommand):
         self.stdout.write("  [OK] 3 Fertilizer Products configured.")
 
         # 4. Cultivation Seasons (Active Maha 2026/2027 + Closed Yala 2026)
-        today = timezone.now().date()
+        today = timezone.localdate()
         s_maha, _ = Season.objects.get_or_create(
             name="Maha 2026/2027",
             defaults={

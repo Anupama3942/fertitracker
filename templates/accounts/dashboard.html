@@ -484,9 +484,12 @@
     <!-- Admin Quick Management Shortcuts -->
     <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
       <h2 class="text-base font-black text-slate-800 mb-3">{% trans "Administrative Operations" %}</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+        <a href="{% url 'admin_officers' %}" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 p-3 rounded-xl font-bold text-emerald-900 text-center transition">
+          👥 {% trans "Manage Officers & Accounts" %}
+        </a>
         <a href="{% url 'manage_farmers' %}" class="bg-slate-100 hover:bg-slate-200 p-3 rounded-xl font-bold text-slate-800 text-center transition">
-          👨‍🌾 {% trans "Farmer Profiles & CSV Import" %}
+          👨‍🌾 {% trans "Farmer Profiles & Quotas" %}
         </a>
         <a href="{% url 'batch_traceability' %}" class="bg-slate-100 hover:bg-slate-200 p-3 rounded-xl font-bold text-slate-800 text-center transition">
           🔍 {% trans "Batch Traceability Lifecycle" %}

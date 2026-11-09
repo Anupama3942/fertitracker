@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">✏️</span>
+        <h1 class="text-2xl font-black text-slate-800">{% trans "Edit Farmer Entitlement" %}</h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Update approved fertilizer quota for this farmer. All modifications are logged with old and new values." %}
+      </p>
+    </div>
+    <a href="{% url 'manage_farmers' %}" class="touch-target px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
+      ⬅️ {% trans "Back" %}
+    </a>
+  </div>
+
+  <!-- Entitlement Details Card -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
+    <div class="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 text-sm">
+      <div>
+        <span class="text-xs font-bold uppercase text-slate-500 block">{% trans "Farmer" %}</span>
+        <strong class="text-slate-800 text-base">{{ entitlement.farmer.full_name }}</strong>
+        <span class="block text-xs font-mono text-slate-500 mt-0.5">NIC: {{ entitlement.farmer.masked_nic }}</span>
+      </div>
+      <div>
+        <span class="text-xs font-bold uppercase text-slate-500 block">{% trans "Cultivation Season" %}</span>
+        <strong class="text-emerald-800 text-base">{{ entitlement.season.name }}</strong>
+        <span class="block text-xs text-slate-500 mt-0.5">{{ entitlement.season.status }}</span>
+      </div>
+      <div>
+        <span class="text-xs font-bold uppercase text-slate-500 block">{% trans "Product" %}</span>
+        <strong class="text-slate-800 text-base">{{ entitlement.product.name }}</strong>
+        <span class="block text-xs text-slate-500 mt-0.5">{{ entitlement.product.bag_weight_kg }} kg {% trans "bags" %}</span>
+      </div>
+      <div>
+        <span class="text-xs font-bold uppercase text-slate-500 block">{% trans "Current Quota State" %}</span>
+        <div class="mt-0.5">
+          <span class="font-bold text-slate-800">{{ entitlement.approved_kg }} kg</span> {% trans "Approved" %} &bull;
+          <span class="font-bold text-emerald-700">{{ entitlement.remaining_kg }} kg</span> {% trans "Remaining" %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Form -->
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">
+          {% trans "New Approved Quota (kg)" %} *
+        </label>
+        <div class="relative">
+          <input
+            type="number"
+            step="0.01"
+            min="1"
+            name="approved_kg"
+            value="{{ entitlement.approved_kg }}"
+            required
+            class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 text-base font-bold focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none"
+          >
+          <span class="absolute right-4 top-3.5 text-slate-400 font-bold text-sm">kg</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1.5">
+          {% trans "Note: The remaining balance will be adjusted by the difference between the new and old approved quota." %}
+        </p>
+      </div>
+
+      <div class="pt-3 border-t flex justify-end gap-3">
+        <a href="{% url 'manage_farmers' %}" class="touch-target px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
+          {% trans "Cancel" %}
+        </a>
+        <button type="submit" class="touch-target bg-emerald-700 hover:bg-emerald-800 text-white font-black px-6 py-2.5 rounded-xl text-sm shadow transition flex items-center gap-2">
+          <span>💾</span> {% trans "Save Entitlement" %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

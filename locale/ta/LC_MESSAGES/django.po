@@ -525,3 +525,79 @@ msgstr "அலுவலர் வாரியான வழங்கல் வி
 msgid "Recent Officer-Assisted Distributions Log"
 msgstr "சமீபத்திய உதவி உர வழங்கல் பதிவு"
 
+msgid "System Officers Management"
+msgstr "அமைப்பு அதிகாரிகள் கணக்கு மேலாண்மை"
+
+msgid "Create New Officer Account"
+msgstr "புதிய அதிகாரி கணக்கை உருவாக்கு"
+
+msgid "Create Officer Account"
+msgstr "அதிகாரி கணக்கை உருவாக்கு"
+
+msgid "Existing Officers"
+msgstr "தற்போதுள்ள அதிகாரிகள்"
+
+msgid "Manage Officers & Accounts"
+msgstr "அதிகாரிகள் மற்றும் கணக்குகளை நிர்வகி"
+
+msgid "CSV Entitlement Import Preview"
+msgstr "CSV உரம் ஒதுக்கீட்டின் முந்தைய பார்வை"
+
+msgid "Target Cultivation Season:"
+msgstr "குறிக்கோள் பயிர்ச்செய்கை பருவம்:"
+
+msgid "Validation Errors Detected — Import Blocked"
+msgstr "சரிபார்ப்பு பிழைகள் கண்டறியப்பட்டன — இறக்குமதி தடுக்கப்பட்டது"
+
+msgid "All Rows Validated Successfully"
+msgstr "அனைத்து வரிகளும் வெற்றிகரமாக சரிபார்க்கப்பட்டன"
+
+msgid "Confirm All-or-Nothing Import"
+msgstr "முழுமையான இறக்குமதியை உறுதிப்படுத்துக"
+
+msgid "Cancel & Upload Different File"
+msgstr "ரத்து செய்து வேறு கோப்பை பதிவேற்று"
+
+msgid "Import Blocked (Correct Errors First)"
+msgstr "இறக்குமதி தடுக்கப்பட்டது (முதலில் பிழைகளை சரிசெய்யவும்)"
+
+msgid "Edit Farmer Entitlement"
+msgstr "விவசாயி உரம் ஒதுக்கீட்டை திருத்து"
+
+msgid "Save Entitlement"
+msgstr "ஒதுக்கீட்டை சேமி"
+
+msgid "New Approved Quota (kg)"
+msgstr "புதிய அங்கீகரிக்கப்பட்ட ஒதுக்கீடு (கிலோ)"
+
+msgid "Farmer Profiles & Entitlement Management"
+msgstr "விவசாயி விவரங்கள் மற்றும் ஒதுக்கீடு மேலாண்மை"
+
+msgid "Bulk Entitlement Import"
+msgstr "மொத்த உரம் ஒதுக்கீடு இறக்குமதி (CSV)"
+
+msgid "Sample CSV"
+msgstr "மாதிரி CSV கோப்பு"
+
+msgid "Upload & Preview Quotas"
+msgstr "பதிவேற்றி ஒதுக்கீட்டை முற்பார்வையிடு"
+
+msgid "Register Single Farmer"
+msgstr "தனிப்பட்ட விவசாயி பதிவு"
+
+msgid "Register Farmer (Starts Inactive)"
+msgstr "விவசாயியை பதிவு செய் (செயலற்றதாக தொடங்கும்)"
+
+msgid "Update Farmer Mobile Number"
+msgstr "விவசாயியின் கைபேசி எண்ணை புதுப்பித்தல்"
+
+msgid "Verify & Update Mobile Number"
+msgstr "சரிபார்த்து கைபேசி எண்ணை புதுப்பி"
+
+msgid "I verified the original National Identity Card in person."
+msgstr "நான் அசல் தேசிய அடையாள அட்டையை நேரில் சரிபார்த்தேன்."
+
+msgid "Your session has expired due to inactivity, or login is required. Please sign in again to continue."
+msgstr "செயலற்ற தன்மை காரணமாக உங்கள் அமர்வு காலாவதியானது. தயவுசெய்து மீண்டும் உள்நுழையவும்."
+
+

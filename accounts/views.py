@@ -1,11 +1,16 @@
+import secrets
+import string
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash, login, logout, authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext as _
+from django.conf import settings
 from core.models import Warehouse, ASCCentre, Season, FertilizerProduct
 from .models import User, PasswordResetOTP
 from django.utils import timezone
-import hashlib
 from farmers.models import Farmer
 from distributions.models import AuditLog, FertilizerDistribution
 from .services import SMSNotificationService
@@ -27,20 +32,26 @@ def login_view(request):
 
         user_obj = User.objects.filter(username=username).first()
 
-        # 1. ගිණුම Lock වී ඇත්දැයි පරීක්ෂා කිරීම
+        # Check deactivated account
+        if user_obj and not user_obj.is_active:
+            AuditLog.objects.create(user=user_obj, action="LOGIN_DEACTIVATED_USER", ip_address=client_ip, details="Attempted login on deactivated account.")
+            messages.error(request, _("This account has been deactivated. Please contact your system administrator."))
+            return render(request, 'accounts/login.html')
+
+        # 1. Check if account is locked out
         if user_obj and user_obj.is_locked():
             remaining_mins = int((user_obj.locked_until - timezone.now()).total_seconds() // 60) + 1
-            messages.error(request, f"වැරදි උත්සාහයන් වැඩි වීම නිසා ගිණුම තාවකාලිකව අගුළු දමා ඇත. මිනිත්තු {remaining_mins}කින් නැවත උත්සාහ කරන්න.")
+            messages.error(request, _("Too many failed attempts. Account locked. Please try again in %(mins)d minutes.") % {'mins': remaining_mins})
             return render(request, 'accounts/login.html')
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
             if not user.is_account_active:
-                messages.error(request, "ඔබගේ ගිණුම තවමත් සක්‍රිය කර නොමැත. කරුණාකර OTP මඟින් සක්‍රිය කරන්න.")
+                messages.error(request, _("Your account is not activated yet. Please activate using OTP."))
                 return redirect('activate_account')
 
-            # සාර්ථක Login එකකදී වැරදි උත්සාහයන් 0 බවට පත් කිරීම
+            # Successful login resets failure counters
             user.failed_login_attempts = 0
             user.locked_until = None
             user.save()
@@ -80,7 +91,7 @@ def dashboard_view(request):
     if user.role == 'FARMER':
         return redirect('farmer_dashboard')
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     is_asc_head = getattr(user, 'is_asc_head', False) or user.role == 'ADMIN' or user.is_superuser
     active_seasons = Season.objects.filter(status='ACTIVE')
     open_season = active_seasons.first()
@@ -214,6 +225,7 @@ def dashboard_view(request):
 def activate_account_view(request):
     """
     Activate a farmer account with an OTP sent to the registered phone number.
+    Rate limited (max 3/hr, 60s cooldown), 5-attempt lock, generic response for privacy.
     """
     step = request.session.get('activation_step', 1)
     nic = request.session.get('activation_nic', '')
@@ -224,17 +236,24 @@ def activate_account_view(request):
 
         if action == 'send_otp':
             nic = request.POST.get('nic', '').strip()
-            farmer = Farmer.objects.filter(nic_number=nic).first()
-            
-            # Use a generic response so the existence of a NIC cannot be revealed.
+            farmer = Farmer.objects.filter(nic_number__iexact=nic).first()
+
+            # Generic response ensures NIC existence is never leaked to unauthenticated users
             if farmer and farmer.user:
-                raw_otp = SMSNotificationService.send_otp(farmer.user, farmer.mobile_number, purpose="ACTIVATION")
+                try:
+                    raw_otp = SMSNotificationService.send_otp(farmer.user, farmer.mobile_number, purpose="ACTIVATION")
+                    request.session['activation_nic'] = nic
+                    request.session['activation_step'] = 2
+                    request.session['simulated_otp'] = raw_otp
+                except ValidationError as e:
+                    messages.error(request, e.message if hasattr(e, 'message') else str(e))
+                    return redirect('activate_account')
+            else:
                 request.session['activation_nic'] = nic
                 request.session['activation_step'] = 2
-                request.session['simulated_otp'] = raw_otp
-                messages.success(request, f"An OTP was sent to the registered phone number. (Prototype OTP: {raw_otp})")
-            else:
-                messages.error(request, "No registered farmer account was found for this NIC number.")
+                request.session['simulated_otp'] = ''
+
+            messages.success(request, _("If this National Identity Card (NIC) is registered, an OTP has been sent to the registered mobile number."))
             return redirect('activate_account')
 
         elif action == 'verify_and_set_password':
@@ -242,30 +261,35 @@ def activate_account_view(request):
             new_password = request.POST.get('new_password', '').strip()
             confirm_password = request.POST.get('confirm_password', '').strip()
 
-            farmer = Farmer.objects.filter(nic_number=nic).first()
+            farmer = Farmer.objects.filter(nic_number__iexact=nic).first()
             if not farmer or not farmer.user:
-                messages.error(request, "Something went wrong. Please try again.")
+                messages.error(request, _("Invalid verification session. Please try again."))
                 return redirect('activate_account')
 
             user = farmer.user
             active_otp = PasswordResetOTP.objects.filter(user=user, is_used=False).order_by('-created_at').first()
 
             if not active_otp or not active_otp.is_valid():
-                messages.error(request, "The OTP has expired or is invalid.")
+                messages.error(request, _("The OTP has expired or exceeded maximum failed attempts (5). Please request a new OTP."))
                 return redirect('activate_account')
 
-            entered_hash = hashlib.sha256(entered_otp.encode()).hexdigest()
-            if active_otp.otp_hash != entered_hash:
-                active_otp.attempts += 1
-                active_otp.save()
-                messages.error(request, f"The OTP is incorrect. Remaining attempts: {3 - active_otp.attempts}")
+            if not active_otp.verify_entered_otp(entered_otp):
+                remaining = max(0, 5 - active_otp.attempts)
+                messages.error(request, _("The OTP is incorrect. Remaining attempts: %(remaining)d") % {'remaining': remaining})
                 return redirect('activate_account')
 
             if new_password != confirm_password:
-                messages.error(request, "The two passwords do not match.")
+                messages.error(request, _("The passwords do not match."))
                 return redirect('activate_account')
 
-            # Activate the account and set the new password.
+            try:
+                validate_password(new_password, user=user)
+            except ValidationError as e:
+                for msg in e.messages:
+                    messages.error(request, msg)
+                return redirect('activate_account')
+
+            # Activate account and store hashed password
             user.set_password(new_password)
             user.is_account_active = True
             user.save()
@@ -273,13 +297,16 @@ def activate_account_view(request):
             active_otp.is_used = True
             active_otp.save()
 
-            # Clear the temporary activation session data.
             request.session.pop('activation_step', None)
             request.session.pop('activation_nic', None)
             request.session.pop('simulated_otp', None)
 
-            AuditLog.objects.create(user=user, action="ACCOUNT_ACTIVATED", details=f"Account activated via OTP for NIC: {nic}")
-            messages.success(request, "Your account was activated successfully. You can now log in.")
+            AuditLog.objects.create(
+                user=user,
+                action="ACCOUNT_ACTIVATED",
+                details=f"Farmer {farmer.masked_nic} activated account via HMAC-SHA256 OTP."
+            )
+            messages.success(request, _("Your account was activated successfully! You can now log in."))
             return redirect('login')
 
     return render(request, 'accounts/activate_account.html', {'step': step, 'simulated_otp': simulated_otp})
@@ -288,27 +315,38 @@ def activate_account_view(request):
 def password_reset_request_view(request):
     """
     Request a password-reset OTP using the farmer's NIC number.
+    Returns generic response to prevent user enumeration attacks.
     """
     if request.method == 'POST':
         nic = request.POST.get('nic', '').strip()
-        farmer = Farmer.objects.filter(nic_number=nic).first()
-        
+        farmer = Farmer.objects.filter(nic_number__iexact=nic).first()
+
         if farmer and farmer.user:
-            raw_otp = PasswordResetOTP.generate_otp(farmer.user)
-            request.session['reset_nic'] = nic
-            request.session['simulated_reset_otp'] = raw_otp
-            AuditLog.objects.create(action="PASSWORD_RESET_REQUESTED", details=f"Reset OTP requested for NIC: {nic}")
-            messages.success(request, f"A password-reset OTP was sent. (Prototype OTP: {raw_otp})")
-            return redirect('password_reset_confirm')
+            try:
+                raw_otp = SMSNotificationService.send_otp(farmer.user, farmer.mobile_number, purpose="PASSWORD_RESET")
+                request.session['reset_nic'] = nic
+                request.session['simulated_reset_otp'] = raw_otp
+                AuditLog.objects.create(
+                    user=farmer.user,
+                    action="PASSWORD_RESET_REQUESTED",
+                    details=f"Password reset OTP requested for NIC {farmer.masked_nic}."
+                )
+            except ValidationError as e:
+                messages.error(request, e.message if hasattr(e, 'message') else str(e))
+                return redirect('password_reset_request')
         else:
-            messages.error(request, "No account was found for this NIC number.")
+            request.session['reset_nic'] = nic
+            request.session['simulated_reset_otp'] = ''
+
+        messages.success(request, _("If this National Identity Card (NIC) is registered, a password-reset OTP has been sent to the registered mobile number."))
+        return redirect('password_reset_confirm')
 
     return render(request, 'accounts/password_reset_request.html')
 
 
 def password_reset_confirm_view(request):
     """
-    Verify the password-reset OTP and set a new password.
+    Verify the password-reset OTP (HMAC-SHA256, max 5 attempts) and set a new compliant password.
     """
     nic = request.session.get('reset_nic')
     simulated_otp = request.session.get('simulated_reset_otp')
@@ -319,22 +357,34 @@ def password_reset_confirm_view(request):
     if request.method == 'POST':
         entered_otp = request.POST.get('otp', '').strip()
         new_password = request.POST.get('new_password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
 
-        farmer = Farmer.objects.filter(nic_number=nic).first()
+        farmer = Farmer.objects.filter(nic_number__iexact=nic).first()
         if not farmer or not farmer.user:
-            messages.error(request, "Something went wrong.")
+            messages.error(request, _("Invalid reset session. Please request a new OTP."))
             return redirect('password_reset_request')
 
         user = farmer.user
         active_otp = PasswordResetOTP.objects.filter(user=user, is_used=False).order_by('-created_at').first()
 
         if not active_otp or not active_otp.is_valid():
-            messages.error(request, "The OTP has expired.")
+            messages.error(request, _("The OTP has expired or exceeded maximum failed attempts (5). Please request a new OTP."))
             return redirect('password_reset_request')
 
-        entered_hash = hashlib.sha256(entered_otp.encode()).hexdigest()
-        if active_otp.otp_hash != entered_hash:
-            messages.error(request, "The OTP is incorrect.")
+        if not active_otp.verify_entered_otp(entered_otp):
+            remaining = max(0, 5 - active_otp.attempts)
+            messages.error(request, _("The OTP is incorrect. Remaining attempts: %(remaining)d") % {'remaining': remaining})
+            return redirect('password_reset_confirm')
+
+        if new_password != confirm_password:
+            messages.error(request, _("The passwords do not match."))
+            return redirect('password_reset_confirm')
+
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as e:
+            for msg in e.messages:
+                messages.error(request, msg)
             return redirect('password_reset_confirm')
 
         user.set_password(new_password)
@@ -345,8 +395,12 @@ def password_reset_confirm_view(request):
         request.session.pop('reset_nic', None)
         request.session.pop('simulated_reset_otp', None)
 
-        AuditLog.objects.create(user=user, action="PASSWORD_RESET_SUCCESSFUL", details=f"Password reset via OTP for NIC: {nic}")
-        messages.success(request, "Your password was changed successfully. You can now log in.")
+        AuditLog.objects.create(
+            user=user,
+            action="PASSWORD_RESET_SUCCESSFUL",
+            details=f"Farmer {farmer.masked_nic} reset password via OTP."
+        )
+        messages.success(request, _("Your password was changed successfully. You can now log in."))
         return redirect('login')
 
     return render(request, 'accounts/password_reset_confirm.html', {'simulated_otp': simulated_otp})
@@ -354,38 +408,196 @@ def password_reset_confirm_view(request):
 
 @login_required
 def force_password_change_view(request):
-    """FR-A2: නිලධාරියා පළමු login එකේදී තාවකාලික මුරපදය අනිවාර්යයෙන්ම වෙනස් කළ යුතුය."""
+    """
+    Enforce mandatory password update upon first login for newly created officers.
+    Validates against Django password validators (min 8, not common, not purely numeric).
+    """
     if request.method == 'POST':
         new_pw = request.POST.get('new_password', '').strip()
         confirm_pw = request.POST.get('confirm_password', '').strip()
 
-        if len(new_pw) < 8:
-            messages.error(request, "මුරපදය අවම වශයෙන් අකුරු 8ක් විය යුතුය.")
-        elif new_pw != confirm_pw:
-            messages.error(request, "මුරපද දෙක එකිනෙකට ගැළපෙන්නේ නැත.")
-        else:
-            request.user.set_password(new_pw)
-            request.user.must_change_password = False
-            request.user.save()
-            update_session_auth_hash(request, request.user)
-            AuditLog.objects.create(user=request.user, action="FIRST_LOGIN_PASSWORD_CHANGED", details="Officer updated temporary password.")
-            messages.success(request, "මුරපදය සාර්ථකව යාවත්කාලීන කරන ලදී!")
-            return redirect('dashboard')
+        if new_pw != confirm_pw:
+            messages.error(request, _("The passwords do not match."))
+            return render(request, 'accounts/force_password_change.html')
+
+        try:
+            validate_password(new_pw, user=request.user)
+        except ValidationError as e:
+            for msg in e.messages:
+                messages.error(request, msg)
+            return render(request, 'accounts/force_password_change.html')
+
+        request.user.set_password(new_pw)
+        request.user.must_change_password = False
+        request.user.save()
+        update_session_auth_hash(request, request.user)
+
+        AuditLog.objects.create(
+            user=request.user,
+            action="FIRST_LOGIN_PASSWORD_CHANGED",
+            details=f"Officer '{request.user.username}' changed initial temporary password."
+        )
+        messages.success(request, _("Your password was updated successfully!"))
+        return redirect('dashboard')
 
     return render(request, 'accounts/force_password_change.html')
 
 
 @role_required('ADMIN')
 def toggle_season_status(request, season_id):
-    """Admin හට කන්නයක් (Maha/Yala) Open (ACTIVE) හෝ Close (CLOSED) කිරීමට හැකි වීම."""
+    """
+    Admin toggle season status.
+    Enforces invariant: Only one season can be OPEN (ACTIVE) at a time across the system.
+    """
     if request.method == 'POST':
         season = get_object_or_404(Season, id=season_id)
-        season.status = 'CLOSED' if season.status == 'ACTIVE' else 'ACTIVE'
+        if season.status != 'ACTIVE':
+            # Setting this season to ACTIVE closes all other active seasons
+            Season.objects.exclude(id=season.id).update(status='CLOSED')
+            season.status = 'ACTIVE'
+        else:
+            season.status = 'CLOSED'
         season.save()
+
         AuditLog.objects.create(
             user=request.user,
             action="SEASON_STATUS_CHANGED",
-            details=f"Season '{season.name}' status changed to {season.status}"
+            details=f"Season '{season.name}' status changed to {season.status}. Single active season invariant enforced."
         )
-        messages.success(request, f"'{season.name}' කන්නයේ තත්ත්වය {season.status} ලෙස යාවත්කාලීන කරන ලදී.")
+        messages.success(request, _("Season '%(name)s' status updated to %(status)s.") % {'name': season.name, 'status': season.status})
     return redirect('dashboard')
+
+
+@role_required('ADMIN')
+def admin_officers_view(request):
+    """
+    Admin-only management of system officers (Warehouse Officer, ASC Officer, ASC Head, Auditor):
+    - Creation with 12-char random temp password displayed once
+    - Forced password change on first login (must_change_password=True)
+    - Deactivation / reactivation (never delete, preserves immutable audit log)
+    - Password reset with temporary password
+    - Comprehensive audit logging
+    """
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create_officer':
+            username = request.POST.get('username', '').strip()
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            email = request.POST.get('email', '').strip()
+            role = request.POST.get('role', '').strip()
+            asc_centre_id = request.POST.get('asc_centre')
+            is_asc_head = request.POST.get('is_asc_head') == 'on'
+
+            allowed_roles = [
+                User.RoleChoices.WAREHOUSE_OFFICER,
+                User.RoleChoices.ASC_OFFICER,
+                User.RoleChoices.AUDITOR
+            ]
+
+            if role not in allowed_roles:
+                messages.error(request, _("Invalid role selected."))
+                return redirect('admin_officers')
+
+            if not username:
+                messages.error(request, _("Username is required."))
+                return redirect('admin_officers')
+
+            if User.objects.filter(username__iexact=username).exists():
+                messages.error(request, _("A user with username '%(username)s' already exists.") % {'username': username})
+                return redirect('admin_officers')
+
+            # Generate random 12-character compliant temporary password
+            alphabet = string.ascii_letters + string.digits + "!@#$%"
+            temp_password = "".join(secrets.choice(alphabet) for _ in range(12))
+
+            asc_obj = None
+            if role == User.RoleChoices.ASC_OFFICER and asc_centre_id:
+                asc_obj = ASCCentre.objects.filter(id=asc_centre_id).first()
+
+            new_officer = User.objects.create(
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                role=role,
+                asc_centre=asc_obj,
+                is_asc_head=is_asc_head if role == User.RoleChoices.ASC_OFFICER else False,
+                must_change_password=True,
+                is_account_active=True,
+                is_active=True
+            )
+            new_officer.set_password(temp_password)
+            new_officer.save()
+
+            AuditLog.objects.create(
+                user=request.user,
+                action="OFFICER_CREATED",
+                details=f"Admin created officer '{new_officer.username}' (Role: {new_officer.get_role_display()}, ASC: {asc_obj.name if asc_obj else 'None'}). Temp password issued."
+            )
+
+            messages.success(
+                request,
+                _("Officer '%(user)s' created successfully! Temporary Password: %(pw)s (Please copy and share securely — it will not be displayed again.)")
+                % {'user': new_officer.username, 'pw': temp_password}
+            )
+            return redirect('admin_officers')
+
+        elif action == 'toggle_status':
+            officer_id = request.POST.get('officer_id')
+            officer = get_object_or_404(User, id=officer_id)
+
+            if officer == request.user or officer.is_superuser:
+                messages.error(request, _("You cannot deactivate your own account or the superuser."))
+                return redirect('admin_officers')
+
+            officer.is_active = not officer.is_active
+            officer.save()
+
+            AuditLog.objects.create(
+                user=request.user,
+                action="OFFICER_STATUS_TOGGLED",
+                details=f"Admin set officer '{officer.username}' active status to {officer.is_active}."
+            )
+            status_text = _("activated") if officer.is_active else _("deactivated")
+            messages.success(request, _("Officer '%(user)s' has been %(status)s.") % {'user': officer.username, 'status': status_text})
+            return redirect('admin_officers')
+
+        elif action == 'reset_password':
+            officer_id = request.POST.get('officer_id')
+            officer = get_object_or_404(User, id=officer_id)
+
+            alphabet = string.ascii_letters + string.digits + "!@#$%"
+            temp_password = "".join(secrets.choice(alphabet) for _ in range(12))
+
+            officer.set_password(temp_password)
+            officer.must_change_password = True
+            officer.save()
+
+            AuditLog.objects.create(
+                user=request.user,
+                action="OFFICER_PASSWORD_RESET",
+                details=f"Admin reset temporary password for officer '{officer.username}'."
+            )
+            messages.success(
+                request,
+                _("Temporary password for '%(user)s' has been reset to: %(pw)s (User will be forced to change it at next login).")
+                % {'user': officer.username, 'pw': temp_password}
+            )
+            return redirect('admin_officers')
+
+    officers = User.objects.exclude(role=User.RoleChoices.FARMER).order_by('-date_joined')
+    ascs = ASCCentre.objects.all().order_by('name')
+
+    context = {
+        'officers': officers,
+        'ascs': ascs,
+        'roles': [
+            (User.RoleChoices.ASC_OFFICER, _("ASC Officer")),
+            (User.RoleChoices.WAREHOUSE_OFFICER, _("Warehouse Officer")),
+            (User.RoleChoices.AUDITOR, _("Auditor")),
+        ]
+    }
+    return render(request, 'accounts/admin_officers.html', context)
+

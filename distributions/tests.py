@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import date, timedelta
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from core.models import ASCCentre, Warehouse, Season, FertilizerProduct
@@ -817,10 +818,311 @@ class FEFOExpiryAndWriteOffTests(TestCase):
         The seed_demo_data management command runs without errors and sets up required records.
         """
         from django.core.management import call_command
-        call_command('seed_demo_data')
+        call_command('seed_demo_data', force=True)
 
         self.assertTrue(ASCCentre.objects.filter(name__icontains="Vavuniya").exists())
         self.assertTrue(FertilizerBatch.objects.filter(batch_number="UREA-2026-B01").exists())
         self.assertTrue(Farmer.objects.filter(full_name="K. Selvaratnam").exists())
+
+
+class AuditLogImmutabilityTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="auditor_test", password="Password123!", role=User.RoleChoices.AUDITOR)
+        self.log_entry = AuditLog.objects.create(
+            user=self.user,
+            action="TEST_ACTION",
+            details="Initial immutable audit log record."
+        )
+
+    def test_audit_log_instance_cannot_be_modified(self):
+        """Attempting to update an existing AuditLog record must raise ValidationError."""
+        self.log_entry.details = "Tampered details"
+        with self.assertRaises(ValidationError) as ctx:
+            self.log_entry.save()
+        self.assertIn("append-only", str(ctx.exception))
+
+    def test_audit_log_instance_cannot_be_deleted(self):
+        """Attempting to delete an individual AuditLog record must raise ValidationError."""
+        with self.assertRaises(ValidationError) as ctx:
+            self.log_entry.delete()
+        self.assertIn("cannot be deleted", str(ctx.exception))
+
+    def test_audit_log_queryset_bulk_delete_blocked(self):
+        """Attempting bulk deletion on AuditLog QuerySet must raise ValidationError."""
+        with self.assertRaises(ValidationError) as ctx:
+            AuditLog.objects.filter(action="TEST_ACTION").delete()
+        self.assertIn("cannot be bulk deleted", str(ctx.exception))
+
+    def test_audit_log_queryset_bulk_update_blocked(self):
+        """Attempting bulk update on AuditLog QuerySet must raise ValidationError."""
+        with self.assertRaises(ValidationError) as ctx:
+            AuditLog.objects.filter(action="TEST_ACTION").update(details="Bulk tampered")
+        self.assertIn("cannot be bulk modified", str(ctx.exception))
+
+
+class FarmerRegistrationAndPhoneSecurityTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.asc = ASCCentre.objects.create(name="Cheddikulam ASC", district="Vavuniya", address="Mannar Road")
+        self.officer = User.objects.create_user(
+            username="asc_cheddikulam",
+            password="Password123!",
+            role=User.RoleChoices.ASC_OFFICER,
+            asc_centre=self.asc
+        )
+        self.season = Season.objects.create(
+            name="Maha 2026/2027",
+            start_date=timezone.localdate(),
+            end_date=timezone.localdate() + timedelta(days=120),
+            status=Season.StstusChoices.ACTIVE
+        )
+        self.product = FertilizerProduct.objects.create(name="Urea", bag_weight_kg=Decimal("50.00"))
+
+    def test_registration_with_invalid_nic_fails(self):
+        """Invalid Sri Lankan NIC formats are rejected."""
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse('manage_farmers'), {
+            'action': 'register_single_farmer',
+            'nic_number': '12345',  # Invalid length
+            'full_name': 'Test Farmer',
+            'mobile_number': '0771234567',
+            'arpa_division': 'Vavuniya',
+            'season': self.season.id,
+            'product': self.product.id,
+            'approved_kg': '50.00'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invalid Sri Lankan NIC format")
+        self.assertFalse(Farmer.objects.filter(full_name='Test Farmer').exists())
+
+    def test_registration_with_valid_nic_starts_inactive(self):
+        """Valid registration creates farmer with inactive user account (starts INACTIVE)."""
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse('manage_farmers'), {
+            'action': 'register_single_farmer',
+            'nic_number': '199512345678',  # Valid 12-digit format
+            'full_name': 'S. Kumar',
+            'mobile_number': '0779876543',
+            'arpa_division': 'Cheddikulam South',
+            'season': self.season.id,
+            'product': self.product.id,
+            'approved_kg': '100.00'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "INACTIVE until activated via OTP")
+
+        farmer = Farmer.objects.filter(nic_number='199512345678').first()
+        self.assertIsNotNone(farmer)
+        self.assertFalse(farmer.user.is_account_active)
+
+    def test_phone_update_requires_in_person_verification(self):
+        """Updating phone number without in-person verification tick is blocked."""
+        farmer = Farmer.objects.create(
+            user=User.objects.create_user(username='198012345678', password='P1', role=User.RoleChoices.FARMER),
+            full_name="P. Rasiah",
+            nic_number="198012345678",
+            mobile_number="0771112233"
+        )
+        self.client.force_login(self.officer)
+
+        # Attempt update without checkbox
+        response = self.client.post(reverse('manage_farmers'), {
+            'action': 'update_phone',
+            'nic_number': '198012345678',
+            'new_mobile': '0779998877',
+            'reason': 'Customer requested via telephone'  # Remote request -> not allowed
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Security policy requires confirming in-person verification")
+
+        farmer.refresh_from_db()
+        self.assertEqual(farmer.mobile_number, "0771112233")  # Unchanged
+
+    def test_phone_update_with_verification_masks_audit_log(self):
+        """Updating phone with in-person verification logs masked old and new numbers."""
+        farmer = Farmer.objects.create(
+            user=User.objects.create_user(username='198112345678', password='P1', role=User.RoleChoices.FARMER),
+            full_name="A. Sellathurai",
+            nic_number="198112345678",
+            mobile_number="0771112233"
+        )
+        self.client.force_login(self.officer)
+
+        response = self.client.post(reverse('manage_farmers'), {
+            'action': 'update_phone',
+            'nic_number': '198112345678',
+            'new_mobile': '0715556677',
+            'reason': 'Physical NIC inspected at counter',
+            'in_person_verified': 'on'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        farmer.refresh_from_db()
+        self.assertEqual(farmer.mobile_number, "0715556677")
+
+        # Verify audit log masks the phone numbers
+        log = AuditLog.objects.filter(action="FARMER_PHONE_UPDATED").latest('id')
+        self.assertIn("077****233", log.details)
+        self.assertIn("071****677", log.details)
+        self.assertIn("In-person verification: Verified", log.details)
+
+
+class EntitlementManagementAndCSVPreviewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.asc = ASCCentre.objects.create(name="Nedunkeni ASC", district="Vavuniya", address="Mullaitivu Road")
+        self.officer = User.objects.create_user(username="officer_nedun", password="Password123!", role=User.RoleChoices.ASC_OFFICER, asc_centre=self.asc)
+        self.season = Season.objects.create(name="Maha 2026/2027", start_date=timezone.localdate(), end_date=timezone.localdate() + timedelta(days=90), status='ACTIVE')
+        self.product = FertilizerProduct.objects.create(name="Urea", bag_weight_kg=Decimal("50.00"))
+
+        self.farmer = Farmer.objects.create(
+            user=User.objects.create_user(username='198512345678', password='P1', role=User.RoleChoices.FARMER),
+            full_name="K. Velupillai",
+            nic_number="198512345678",
+            mobile_number="0771234567"
+        )
+        self.entitlement = FarmerEntitlement.objects.create(
+            farmer=self.farmer,
+            season=self.season,
+            product=self.product,
+            approved_kg=Decimal("50.00"),
+            remaining_kg=Decimal("50.00")
+        )
+
+    def test_sample_csv_download_has_utf8_bom(self):
+        """Sample CSV contains UTF-8 BOM (\ufeff) and required column headers."""
+        self.client.force_login(self.officer)
+        response = self.client.get(reverse('download_sample_entitlement_csv'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8-sig')
+        content_bytes = response.content
+        self.assertTrue(content_bytes.startswith(b'\xef\xbb\xbf'))  # UTF-8 BOM
+        self.assertIn(b"nic,product,quantity_kg", content_bytes)
+
+    def test_edit_entitlement_audits_old_and_new_values(self):
+        """Editing an entitlement writes both old and new approved/remaining kg to AuditLog."""
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse('edit_entitlement', kwargs={'entitlement_id': self.entitlement.id}), {
+            'approved_kg': '80.00'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        self.entitlement.refresh_from_db()
+        self.assertEqual(self.entitlement.approved_kg, Decimal("80.00"))
+        self.assertEqual(self.entitlement.remaining_kg, Decimal("80.00"))
+
+        log = AuditLog.objects.filter(action="ENTITLEMENT_EDITED").latest('id')
+        self.assertIn("Approved 50.00kg -> 80.00kg", log.details)
+        self.assertIn("Remaining 50.00kg -> 80.00kg", log.details)
+
+    def test_csv_preview_highlights_errors_and_blocks_commit(self):
+        """CSV with unregistered NIC is flagged with errors and blocks all-or-nothing confirmation."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.force_login(self.officer)
+
+        csv_content = "nic,product,quantity_kg\n999999999999,Urea,50.00\n"
+        csv_file = SimpleUploadedFile("test.csv", csv_content.encode('utf-8'), content_type="text/csv")
+
+        # Phase 1: Upload CSV
+        upload_resp = self.client.post(reverse('manage_farmers'), {
+            'action': 'bulk_csv_import',
+            'season': self.season.id,
+            'csv_file': csv_file
+        })
+        self.assertRedirects(upload_resp, reverse('preview_entitlement_csv'))
+
+        # Preview page shows error banner
+        preview_resp = self.client.get(reverse('preview_entitlement_csv'))
+        self.assertContains(preview_resp, "Validation Errors Detected")
+        self.assertContains(preview_resp, "Import Blocked")
+
+        # Phase 2: Confirmation attempt is blocked
+        confirm_resp = self.client.post(reverse('preview_entitlement_csv'), {
+            'action': 'confirm_import'
+        })
+        self.assertContains(confirm_resp, "All-or-nothing policy requires correcting all errors")
+
+
+class ExpiryBoundaryAndSafeguardTests(TestCase):
+    def setUp(self):
+        self.asc = ASCCentre.objects.create(name="Vavuniya South ASC", district="Vavuniya", address="Kandy Road")
+        self.wh = Warehouse.objects.create(name="Vavuniya Hub", location="Industrial Zone")
+        self.officer = User.objects.create_user(username="asc_off", password="Password123!", role=User.RoleChoices.ASC_OFFICER, asc_centre=self.asc)
+        self.head = User.objects.create_user(username="asc_head_user", password="Password123!", role=User.RoleChoices.ASC_OFFICER, is_asc_head=True, asc_centre=self.asc)
+        self.season = Season.objects.create(name="Maha 2026/2027", start_date=timezone.localdate(), end_date=timezone.localdate() + timedelta(days=90), status='ACTIVE')
+        self.product = FertilizerProduct.objects.create(name="Urea", bag_weight_kg=Decimal("50.00"))
+
+        today = timezone.localdate()
+        self.b_yesterday = FertilizerBatch.objects.create(warehouse=self.wh, product=self.product, batch_number="EXP-YEST", expiry_date=today - timedelta(days=1))
+        self.b_today = FertilizerBatch.objects.create(warehouse=self.wh, product=self.product, batch_number="EXP-TODAY", expiry_date=today)
+        self.b_tomorrow = FertilizerBatch.objects.create(warehouse=self.wh, product=self.product, batch_number="EXP-TOMORROW", expiry_date=today + timedelta(days=1))
+
+        self.st_yesterday = ASCStock.objects.create(asc_centre=self.asc, batch=self.b_yesterday, bags_on_hand=5)
+        self.st_today = ASCStock.objects.create(asc_centre=self.asc, batch=self.b_today, bags_on_hand=5)
+        self.st_tomorrow = ASCStock.objects.create(asc_centre=self.asc, batch=self.b_tomorrow, bags_on_hand=5)
+
+    def test_expiry_boundary_conditions(self):
+        """
+        Verify boundary rules:
+        - Batch expiring yesterday is expired: can be written off, excluded from issuance
+        - Batch expiring today or tomorrow is unexpired: write-off raises ValidationError
+        """
+        from inventory.services import write_off_expired_stock
+
+        # Yesterday's batch can be written off
+        movement = write_off_expired_stock(self.st_yesterday.id, self.head, reason="Expired chemical write-off")
+        self.assertEqual(movement.movement_type, StockMovement.MovementTypeChoices.WRITE_OFF)
+
+        # Today's batch cannot be written off (not yet expired)
+        with self.assertRaises(ValidationError) as ctx1:
+            write_off_expired_stock(self.st_today.id, self.head, reason="Attempt writeoff today")
+        self.assertIn("has not expired yet", str(ctx1.exception))
+
+        # Tomorrow's batch cannot be written off
+        with self.assertRaises(ValidationError) as ctx2:
+            write_off_expired_stock(self.st_tomorrow.id, self.head, reason="Attempt writeoff tomorrow")
+        self.assertIn("has not expired yet", str(ctx2.exception))
+
+    def test_central_service_blocks_issuance_in_closed_season(self):
+        """Issuing fertilizer when season is CLOSED must raise ValidationError."""
+        farmer = Farmer.objects.create(
+            user=User.objects.create_user(username='199012345678', password='P1', role=User.RoleChoices.FARMER),
+            full_name="K. Arumugam",
+            nic_number="199012345678",
+            mobile_number="0771122334"
+        )
+        FarmerEntitlement.objects.create(
+            farmer=farmer,
+            season=self.season,
+            product=self.product,
+            approved_kg=Decimal("50.00"),
+            remaining_kg=Decimal("50.00")
+        )
+        raw_token, raw_code, qr = QRToken.generate_token_for_farmer(farmer, asc_centre=self.asc)
+
+        # Close the season
+        self.season.status = 'CLOSED'
+        self.season.save()
+
+        with self.assertRaises(ValidationError) as ctx:
+            confirm_issue_distribution(
+                raw_input_string=raw_token,
+                asc_officer_user=self.officer,
+                season_id=self.season.id,
+                quantity_kg=Decimal("50.00")
+            )
+        self.assertIn("not currently active", str(ctx.exception))
+
+    def test_seed_demo_data_guard_refuses_when_demo_mode_false(self):
+        """seed_demo_data command raises CommandError if DEMO_MODE=False and --force is not passed."""
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from django.test import override_settings
+
+        with override_settings(DEMO_MODE=False):
+            with self.assertRaises(CommandError) as ctx:
+                call_command('seed_demo_data')
+            self.assertIn("restricted to environments where DEMO_MODE=True", str(ctx.exception))
+
 
 

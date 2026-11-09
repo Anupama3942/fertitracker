@@ -90,12 +90,32 @@ class FertilizerDistribution(models.Model):
         return f"{self.receipt_number} - {self.farmer.full_name} ({self.quantity_kg} kg) [{self.get_issue_method_display()}]"
 
 
+from django.core.exceptions import ValidationError
+
+class AuditLogQuerySet(models.QuerySet):
+    def delete(self):
+        raise ValidationError("AuditLog records are append-only and cannot be bulk deleted.")
+
+    def update(self, **kwargs):
+        raise ValidationError("AuditLog records are append-only and cannot be bulk modified.")
+
+
 class AuditLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
     action = models.CharField(max_length=255)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     details = models.TextField(blank=True, null=True)
+
+    objects = AuditLogQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+        if self.pk and getattr(self, '_state', None) and not self._state.adding:
+            raise ValidationError("AuditLog records are append-only and cannot be modified.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("AuditLog records are append-only and cannot be deleted.")
 
     def __str__(self):
         """Return a readable timestamped audit action description."""

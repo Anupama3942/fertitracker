@@ -45,7 +45,7 @@ SMS_BACKEND = env('SMS_BACKEND', default='distributions.sms.SimulatedSMSBackend'
 LOW_STOCK_THRESHOLD_BAGS = env.int('LOW_STOCK_THRESHOLD_BAGS', default=10)
 NEAR_EXPIRY_DAYS = env.int('NEAR_EXPIRY_DAYS', default=60)
 
-SESSION_COOKIE_AGE = 900  # 900 seconds (15 miniutes)
+SESSION_COOKIE_AGE = 1800  # 1800 seconds (30 minutes)
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 

@@ -525,3 +525,79 @@ msgstr "නිලධාරී අනුව සහය නිකුත් කි�
 msgid "Recent Officer-Assisted Distributions Log"
 msgstr "මෑතකාලීන නිලධාරි සහය නිකුත් කිරීම් සටහන"
 
+msgid "System Officers Management"
+msgstr "පද්ධති නිලධාරී ගිණුම් කළමනාකරණය"
+
+msgid "Create New Officer Account"
+msgstr "නව නිලධාරී ගිණුමක් සාදන්න"
+
+msgid "Create Officer Account"
+msgstr "නිලධාරී ගිණුම සාදන්න"
+
+msgid "Existing Officers"
+msgstr "පවතින නිලධාරීන්"
+
+msgid "Manage Officers & Accounts"
+msgstr "නිලධාරීන් සහ ගිණුම් කළමනාකරණය"
+
+msgid "CSV Entitlement Import Preview"
+msgstr "CSV කෝටා ඇතුළත් කිරීමේ පෙරදසුන"
+
+msgid "Target Cultivation Season:"
+msgstr "අදාළ වගා කන්නය:"
+
+msgid "Validation Errors Detected — Import Blocked"
+msgstr "වලංගු කිරීමේ දෝෂ හඳුනාගෙන ඇත — ඇතුළත් කිරීම අත්හිටුවන ලදී"
+
+msgid "All Rows Validated Successfully"
+msgstr "සියලුම පේළි සාර්ථකව වලංගු කරන ලදී"
+
+msgid "Confirm All-or-Nothing Import"
+msgstr "සියල්ල එකවර ඇතුළත් කිරීම තහවුරු කරන්න"
+
+msgid "Cancel & Upload Different File"
+msgstr "අවලංගු කර වෙනත් ගොනුවක් තෝරන්න"
+
+msgid "Import Blocked (Correct Errors First)"
+msgstr "ඇතුළත් කිරීම අත්හිටුවා ඇත (පළමුව දෝෂ නිවැරදි කරන්න)"
+
+msgid "Edit Farmer Entitlement"
+msgstr "ගොවි පොහොර කෝටාව සංස්කරණය"
+
+msgid "Save Entitlement"
+msgstr "කෝටාව සුරකින්න"
+
+msgid "New Approved Quota (kg)"
+msgstr "නව අනුමත කෝටාව (කි.ග්‍රෑ.)"
+
+msgid "Farmer Profiles & Entitlement Management"
+msgstr "ගොවි තොරතුරු සහ කෝටා කළමනාකරණය"
+
+msgid "Bulk Entitlement Import"
+msgstr "තොග කෝටා ඇතුළත් කිරීම (CSV)"
+
+msgid "Sample CSV"
+msgstr "ආදර්ශ CSV ගොනුව"
+
+msgid "Upload & Preview Quotas"
+msgstr "ගොනුව යොමු කර කෝටා පෙරදසුන බලන්න"
+
+msgid "Register Single Farmer"
+msgstr "තනි ගොවියෙකු ලියාපදිංචි කිරීම"
+
+msgid "Register Farmer (Starts Inactive)"
+msgstr "ගොවියා ලියාපදිංචි කරන්න (අක්‍රියව ආරම්භ වේ)"
+
+msgid "Update Farmer Mobile Number"
+msgstr "ගොවියාගේ ජංගම දුරකථන අංකය යාවත්කාලීන කිරීම"
+
+msgid "Verify & Update Mobile Number"
+msgstr "තහවුරු කර දුරකථන අංකය යාවත්කාලීන කරන්න"
+
+msgid "I verified the original National Identity Card in person."
+msgstr "මම මුල් ජාතික හැඳුනුම්පත පුද්ගලිකවම පරීක්ෂා කර තහවුරු කළෙමි."
+
+msgid "Your session has expired due to inactivity, or login is required. Please sign in again to continue."
+msgstr "අක්‍රියතාව නිසා ඔබගේ සැසිය කල් ඉකුත් වී ඇත. කරුණාකර නැවත ඇතුල් වන්න."
+
+

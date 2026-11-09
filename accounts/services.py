@@ -1,41 +1,29 @@
-import hashlib
-import random
-from datetime import timedelta
-from django.utils import timezone
 from django.conf import settings
 from .models import PasswordResetOTP
 from distributions.models import AuditLog
+from distributions.sms import get_sms_backend
+from core.security import mask_phone_number
 
 class SMSNotificationService:
     @staticmethod
     def send_otp(user, phone_number, purpose="OTP"):
         """
-        Generate and store an OTP, then send it through the simulated notification gateway.
+        Generate, hash with HMAC-SHA256, and store an OTP.
+        Dispatches via pluggable SMS backend (writing to SMSOutbox for demo inbox display).
+        Rate-limited: max 3/hour, 60s cooldown.
         """
-        # Invalidate any previous unused OTPs for this user.
-        PasswordResetOTP.objects.filter(user=user, is_used=False).update(is_used=True)
+        # generate_otp performs rate limiting, invalidates previous OTPs, and creates new one
+        raw_otp = PasswordResetOTP.generate_otp(user)
 
-        # Generate a six-digit OTP.
-        raw_otp = str(random.randint(100000, 999999))
-        hashed = hashlib.sha256(raw_otp.encode()).hexdigest()
-        expiry = timezone.now() + timedelta(minutes=5)
+        farmer = getattr(user, 'farmer_profile', None)
+        message_text = f"FertiTracker: Your OTP for {purpose} is {raw_otp}. Valid for 5 minutes. Do not share."
 
-        PasswordResetOTP.objects.create(
+        sms_backend = get_sms_backend()
+        sms_backend.send_sms(phone_number, message_text, context={'farmer': farmer, 'code': raw_otp})
+
+        AuditLog.objects.create(
             user=user,
-            otp_hash=hashed,
-            expires_at=expiry
+            action=f"SMS_SENT_{purpose}",
+            details=f"OTP sent to {mask_phone_number(phone_number)} for purpose: {purpose}"
         )
-
-        # Check whether the application is running in demo mode.
-        is_demo = getattr(settings, 'DEMO_MODE', True)
-        
-        if is_demo:
-            print(f"\n[DEMO SMS GATEWAY] To: {phone_number} | Purpose: {purpose} | CODE: {raw_otp}\n")
-            AuditLog.objects.create(
-                user=user,
-                action=f"SMS_SENT_{purpose}",
-                details=f"Simulated SMS sent to {phone_number} with OTP."
-            )
-            return raw_otp  # Return the raw OTP for display in the demo screen.
-        
-        return None
+        return raw_otp

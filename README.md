@@ -85,10 +85,13 @@ NEAR_EXPIRY_DAYS=60
 ```
 
 ### 4. Seeding Demo Data (One-Click Setup)
-Initialize the complete demo dataset (warehouses, 5 Northern ASCs, diverse batches, dispatches, 30 farmers, and demo accounts):
+Initialize the complete demo dataset (warehouses, 5 Northern ASCs, diverse batches, dispatches, 30 farmers, and demo accounts). Note that `DEMO_MODE=True` must be set in your `.env` (or pass `--force`):
 ```powershell
 # Seed demo dataset (Idempotent: safe to run multiple times)
 .venv\Scripts\python manage.py seed_demo_data
+
+# Or force execution if DEMO_MODE is False in production
+.venv\Scripts\python manage.py seed_demo_data --force
 
 # Optional: To completely purge and re-seed
 .venv\Scripts\python manage.py seed_demo_data --reset
@@ -99,7 +102,7 @@ Initialize the complete demo dataset (warehouses, 5 Northern ASCs, diverse batch
 > **Why PostgreSQL is required for tests**:
 > Django's test runner executes against the configured PostgreSQL database (`test_fertitracker_db`). SQLite ignores `select_for_update()` row-level locks, whereas PostgreSQL enforces true database-level lock isolation across multi-threaded transactions.
 
-Execute the full suite of 36 tests:
+Execute the full suite of 60 tests:
 ```powershell
 .venv\Scripts\python manage.py test
 ```
@@ -109,7 +112,17 @@ Execute the full suite of 36 tests:
 ```powershell
 .venv\Scripts\python manage.py runserver
 ```
-Access the application at `http://127.0.0.1:8000/`.
+Access the application locally at `http://127.0.0.1:8000/`.
+
+### 7. Cloudflare Tunnel (Live Mobile Testing & Expo Camera Access)
+Modern mobile browsers (iOS Safari, Android Chrome) strictly require a secure **HTTPS** context before granting access to camera hardware via `navigator.mediaDevices.getUserMedia()`. For university exhibition (ICT Expo 5.0) or live smartphone QR scanner testing:
+
+1. Download and run Cloudflare Tunnel:
+```powershell
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+2. Cloudflare outputs a public HTTPS address (e.g. `https://xxxx-xxxx.trycloudflare.com`).
+3. Scan or open this URL on any smartphone or tablet to demonstrate the trilingual interface and real-time QR scanning.
 
 ---
 
@@ -199,9 +212,47 @@ Running `python manage.py check --deploy` evaluates the application against prod
 3. **Q: How is the audit log viewer designed to guarantee audit integrity?**  
    *Answer*: The audit log viewer (`/distributions/audit/logs/`) is strictly read-only. There are no update or delete routes, views, or forms anywhere in the codebase. Every security event (login, token verification, stock receiving, distribution, assisted approval, write-off) is appended immutably to the `AuditLog` table with user, timestamp, client IP, and action details.
 
+### PART 4: Accounts, Authentication & Farmer Inclusion
+1. **Q: How does the system secure temporary officer credentials and protect against privilege misuse?**  
+   *Answer*: Only an Administrator can provision officer accounts (Warehouse Officer, ASC Counter Officer, ASC Head, Auditor). The system generates a cryptographically secure 12-character random temporary password (`secrets.token_urlsafe(9)`) displayed exactly once in an ephemeral flash message. The account is created with `must_change_password=True`. Upon first login, `login_view` detects this flag and forces the officer to a mandatory change password screen governed by Django's strict password validators (min 8 chars, common password checks, non-numeric). Officers cannot access operational views until they change their password. Furthermore, administrators can only deactivate or reactivate accounts; hard-deletions are blocked to maintain full audit accountability.
+
+2. **Q: How are farmer accounts registered, and how are activation OTPs secured against brute-force and user enumeration?**  
+   *Answer*: Farmers are registered by an ASC Officer, who validates their Sri Lankan National Identity Card (NIC) against both the 9-digit + V/X legacy format and the 12-digit modern format. Registered farmer accounts start strictly `INACTIVE` (`is_account_active=False`) and cannot log in until verified. When activating an account or resetting a password, the system generates a 6-digit OTP stored in the database as a keyed HMAC-SHA256 hash using a server secret from settings/env (preventing rainbow table reversal if the DB is compromised). Security controls include:
+   - **Timing-safe comparison**: Verified using Python's `hmac.compare_digest()`.
+   - **Short lifespan & single-use**: Expires after 5 minutes; marked `is_used=True` upon redemption.
+   - **Brute-force lockout**: Inactivated after 5 consecutive incorrect attempts.
+   - **Rate limiting**: Max 3 OTP requests per NIC per hour, with a mandatory 60-second cooldown between requests.
+   - **Anti-enumeration**: The activation/reset endpoint returns an identical generic success response whether the NIC exists or not, preventing attackers from probing the database for registered citizens.
+
+3. **Q: Why is phone-number updating restricted, and how is session hijacking prevented?**  
+   *Answer*: Fertilizer subsidies attract identity fraud. A rogue officer could change a farmer's phone number to their own device and intercept OTP/SMS tokens. Therefore, updating a phone number requires the officer to explicitly check an "I verified the original NIC in person" declaration, which writes an immutable `AuditLog` record containing both the old and new masked numbers (`077****233` -> `071****677`). For session security, idle sessions expire after 30 minutes (`SESSION_COOKIE_AGE = 1800`), redirecting the user to `/login/` with a friendly translated alert (`?next=...`).
+
+### PART 5: Seasons & Entitlement Management
+1. **Q: How does FertiTracker enforce the single active season invariant across the entire system?**  
+   *Answer*: Cultivation seasons in Sri Lanka are strictly divided into Maha and Yala. Allowing multiple active seasons creates ambiguity over which quota applies. In `toggle_season_status`, when an admin toggles a season to `ACTIVE`, the view immediately executes `Season.objects.exclude(id=season.id).update(status='CLOSED')` to close all other seasons. Furthermore, the central `confirm_issue_distribution` atomic service directly verifies `season.status == 'ACTIVE'` and raises a `ValidationError` if the season is closed, ensuring that even if an outdated UI form is submitted, the database transaction aborts.
+
+2. **Q: How does the two-phase CSV entitlement import prevent incomplete or corrupted quota imports?**  
+   *Answer*: Government quota files often contain thousands of rows and formatting anomalies (e.g., UTF-8 Byte Order Marks added by Windows Excel). The system implements a two-phase preview and atomic commit workflow:
+   - **Phase 1 (Preview)**: Uploaded CSV files are parsed using Python's `utf-8-sig` encoding (transparently stripping BOMs if present). Each row is validated (NIC existence, valid product code, positive numeric quantity). The preview screen displays all valid and invalid rows; rows with unknown NICs or invalid quantities are highlighted with red alert badges, and the commit button is disabled until all errors are fixed.
+   - **Phase 2 (Atomic Commit)**: The import is wrapped in `@transaction.atomic`. If any exception occurs during processing, the entire transaction rolls back—preventing partial imports. Every adjusted entitlement logs both the previous and new quota values to the immutable audit trail.
+
+### PART 6: Append-Only Audit Logging & Database Integrity
+1. **Q: How is the `AuditLog` model made mathematically and programmatically immutable?**  
+   *Answer*: Unlike typical Django models where records can be edited or deleted via Python code or Django Admin, `AuditLog` enforces true append-only immutability at three distinct levels:
+   - **Model Level**: The `save()` method raises `ValidationError("AuditLog records are append-only and cannot be modified.")` if `self.pk` already exists. The `delete()` method raises `ValidationError("AuditLog records cannot be deleted.")`.
+   - **QuerySet Level**: A custom `AuditLogQuerySet` overrides `.update()` and `.delete()`, raising `ValidationError` on bulk operations like `AuditLog.objects.filter(...).delete()`.
+   - **Django Admin Level**: `AuditLogAdmin` sets `has_add_permission`, `has_change_permission`, and `has_delete_permission` all to `False`, making it impossible for administrators or staff to tamper with logs through the administrative console.
+
+2. **Q: Why were all instances of `date.today()` and `datetime.now()` replaced with `timezone.localdate()`?**  
+   *Answer*: Server system clocks may run on UTC, while ASC centres and farmers operate in Sri Lanka Standard Time (`Asia/Colombo`, UTC+5:30). Using `date.today()` or naive `datetime.now()` creates a 5.5-hour timezone discrepancy where a batch expiring on midnight local time or a season toggle could be miscalculated or prematurely locked. By strictly enforcing `timezone.localdate()` and `timezone.now()`, all expiry checks, audit timestamps, and daily issue summaries reflect the exact calendar day in Sri Lanka.
+
+3. **Q: What safeguards prevent the `seed_demo_data` command from wiping a live production database?**  
+   *Answer*: In `core/management/commands/seed_demo_data.py`, an explicit environment guard checks `settings.DEMO_MODE`. If `DEMO_MODE` is not `True` and the administrator has not passed the explicit `--force` flag, the command immediately terminates with a `CommandError("DEMO_MODE is False. Refusing to seed demo data in a non-demo environment.")`. This ensures demo seeds cannot overwrite real agrarian records during deployment.
+
 ---
 
 ## 📜 Academic Integrity & Project Information
 - **Course**: TICT3153 — Software Engineering Project
 - **Exhibition**: ICT Expo 5.0, University of Vavuniya
 - **License**: Academic / Government Prototype — Department of Agrarian Development, Sri Lanka
+

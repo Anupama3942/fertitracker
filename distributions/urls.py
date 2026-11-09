@@ -10,6 +10,9 @@ urlpatterns = [
     path('reports/export-csv/', views.export_report_csv, name='export_report_csv'),
     path('reports/batch-trace/', views.batch_traceability_view, name='batch_traceability'),
     path('farmers/manage/', views.manage_farmers_and_bulk_import_view, name='manage_farmers'),
+    path('entitlements/csv-sample/', views.download_sample_entitlement_csv, name='download_sample_entitlement_csv'),
+    path('entitlements/csv-preview/', views.preview_entitlement_csv_view, name='preview_entitlement_csv'),
+    path('entitlements/<int:entitlement_id>/edit/', views.edit_entitlement_view, name='edit_entitlement'),
 
     # Part 1: SMS Backup Code (Keypad Phone Farmers)
     path('farmers/search/', views.farmer_search_view, name='farmer_search'),

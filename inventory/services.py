@@ -2,6 +2,7 @@ import io
 import base64
 import qrcode
 from decimal import Decimal
+from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from .models import StockDispatch, DispatchItem, ASCStock, StockMovement, Discrepancy
@@ -169,7 +170,7 @@ def write_off_expired_stock(stock_id, head_user, reason, bags_to_write_off=None)
             raise ValidationError("You can only write off stock for your assigned Agrarian Service Centre.")
 
     # 3. Expiry check: Must be expired
-    today = timezone.now().date()
+    today = timezone.localdate()
     if stock.batch.expiry_date >= today:
         raise ValidationError(f"Batch {stock.batch.batch_number} has not expired yet (Expiry: {stock.batch.expiry_date}). Only expired batches can be written off.")
 
@@ -219,7 +220,7 @@ def get_stock_alerts(asc_centre=None):
     from django.conf import settings
     from .models import ASCStock, StockThreshold
 
-    today = date.today()
+    today = timezone.localdate()
     near_expiry_window_days = getattr(settings, 'NEAR_EXPIRY_DAYS', 60)
     default_low_threshold = getattr(settings, 'LOW_STOCK_THRESHOLD_BAGS', 10)
     near_expiry_date = today + timedelta(days=near_expiry_window_days)

@@ -1,22 +1,27 @@
+import io
+import csv
+import codecs
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from accounts.decorators import role_required
-from core.models import Season, FertilizerProduct, ASCCentre
-from farmers.models import Farmer, QRToken, FarmerEntitlement
-from .models import FertilizerDistribution, AuditLog, AssistedIssueApproval, SMSOutbox
-from .services import process_qr_distribution
-import csv
 from django.http import HttpResponse
 from django.db.models import Q, Count
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.conf import settings
+from django.db import transaction
+
+from accounts.decorators import role_required
+from accounts.models import User
+from core.models import Season, FertilizerProduct, ASCCentre
+from core.validators import validate_sri_lankan_nic, validate_sri_lankan_phone
+from core.security import mask_phone_number
+from farmers.models import Farmer, QRToken, FarmerEntitlement
+from .models import FertilizerDistribution, AuditLog, AssistedIssueApproval, SMSOutbox
+from .services import process_qr_distribution
 import inventory.models as inv_models
 from inventory.models import ASCStock
-import io
-from decimal import Decimal
-from django.db import transaction
-from accounts.models import User
 
 
 
@@ -219,7 +224,7 @@ def batch_traceability_view(request):
             batch_obj = FertilizerBatch.objects.filter(batch_number__icontains=batch_query).select_related('warehouse', 'product').first()
 
     if batch_obj:
-        today = timezone.now().date()
+        today = timezone.localdate()
         batch_obj.is_expired = batch_obj.expiry_date < today
         batch_obj.days_to_expiry = (batch_obj.expiry_date - today).days
 
@@ -283,7 +288,7 @@ def reports_and_search_view(request):
     Supports comprehensive filtering: season, ASC, product, issue method, status, date range.
     """
     from inventory.models import StockDispatch, ASCStock, FertilizerBatch
-    today = timezone.now().date()
+    today = timezone.localdate()
     q = request.GET.get('q', '').strip()
     date_filter = request.GET.get('date', '').strip()
     season_id = request.GET.get('season')
@@ -412,7 +417,7 @@ def export_report_csv(request):
     response.write('\ufeff')
     writer = csv.writer(response)
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     near_window = today + timezone.timedelta(days=60)
 
     if report_type == 'stocks':
@@ -543,81 +548,121 @@ def manage_farmers_and_bulk_import_view(request):
     if request.method == 'POST':
         action = request.POST.get('action')
 
-        # A. CSV Bulk Import
+@role_required('ADMIN', 'ASC_OFFICER')
+def manage_farmers_and_bulk_import_view(request):
+    """
+    Manage farmer registrations, phone updates, and entitlement CSV imports:
+    - Single registration with strict Sri Lankan NIC & phone validation (account starts INACTIVE)
+    - Phone number updates require in-person NIC verification checkbox, audited with masked numbers
+    - Two-phase CSV import: upload -> validation preview with errors highlighted -> all-or-nothing atomic import
+    """
+    seasons = Season.objects.all().order_by('-id')
+    products = FertilizerProduct.objects.all()
+    farmers_list = Farmer.objects.select_related('user').prefetch_related('entitlements__season', 'entitlements__product').order_by('-id')[:50]
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # A. CSV Bulk Import Phase 1: Upload and Validation Preview
         if action == 'bulk_csv_import':
             csv_file = request.FILES.get('csv_file')
             season_id = request.POST.get('season')
-            product_id = request.POST.get('product')
 
             if not csv_file or not csv_file.name.endswith('.csv'):
-                messages.error(request, "කරුණාකර වලංගු .csv ගොනුවක් තෝරන්න.")
+                messages.error(request, _("Please select a valid .csv file."))
                 return redirect('manage_farmers')
 
+            season = get_object_or_404(Season, id=season_id)
+
             try:
-                data_set = csv_file.read().decode('UTF-8')
-                io_string = io.StringIO(data_set)
-                reader = csv.DictReader(io_string)
-                imported_count = 0
+                # Read with utf-8-sig to handle both UTF-8 with and without BOM
+                raw_bytes = csv_file.read()
+                decoded_text = raw_bytes.decode('utf-8-sig')
+                reader = csv.DictReader(io.StringIO(decoded_text))
 
-                with transaction.atomic():
-                    for row in reader:
-                        nic = row.get('nic_number', '').strip()
-                        full_name = row.get('full_name', '').strip()
-                        mobile = row.get('mobile_number', '').strip()
-                        arpa = row.get('arpa_division', 'Default ARPA').strip()
-                        quota_kg = Decimal(row.get('approved_kg', '50.00').strip())
+                validated_rows = []
+                has_errors = False
+                valid_count = 0
+                error_count = 0
 
-                        if not nic or not full_name:
-                            continue
+                for row_idx, row in enumerate(reader, start=2):  # row 1 is header
+                    # Support flexible header variations: nic, nic_number, NIC
+                    raw_nic = (row.get('nic') or row.get('nic_number') or row.get('NIC') or '').strip()
+                    raw_product = (row.get('product') or row.get('product_name') or row.get('Product') or '').strip()
+                    raw_qty = (row.get('quantity_kg') or row.get('approved_kg') or row.get('quota_kg') or row.get('Quantity') or '').strip()
 
-                        # ගොවියාට අදාළ User ගිණුමක් සෑදීම (Inactive ලෙස - OTP මඟින් සක්‍රිය කළ යුතුය)
-                        user_obj, created_user = User.objects.get_or_create(
-                            username=nic,
-                            defaults={
-                                'role': 'FARMER',
-                                'is_account_active': False,
-                                'asc_centre': request.user.asc_centre if request.user.asc_centre else None
-                            }
-                        )
-                        if created_user:
-                            user_obj.set_unusable_password()
-                            user_obj.save()
+                    row_errors = []
 
-                        # Farmer Profile සෑදීම හෝ යාවත්කාලීන කිරීම
-                        farmer_obj, _ = Farmer.objects.update_or_create(
-                            nic_number=nic,
-                            defaults={
-                                'user': user_obj,
-                                'full_name': full_name,
-                                'mobile_number': mobile,
-                                'arpa_division': arpa,
-                            }
-                        )
+                    # 1. Validate NIC
+                    clean_nic = ""
+                    try:
+                        clean_nic = validate_sri_lankan_nic(raw_nic)
+                    except ValidationError as e:
+                        row_errors.append(str(e.message if hasattr(e, 'message') else e))
 
-                        # Entitlement (Quota) සෑදීම හෝ යාවත්කාලීන කිරීම
-                        FarmerEntitlement.objects.update_or_create(
-                            farmer=farmer_obj,
-                            season_id=season_id,
-                            product_id=product_id,
-                            defaults={
-                                'approved_kg': quota_kg,
-                                'remaining_kg': quota_kg,
-                            }
-                        )
-                        imported_count += 1
+                    # 2. Check Farmer Existence
+                    farmer = None
+                    if clean_nic and not row_errors:
+                        farmer = Farmer.objects.filter(nic_number__iexact=clean_nic).first()
+                        if not farmer:
+                            row_errors.append(_("Farmer with NIC '%(nic)s' is not registered in the system.") % {'nic': clean_nic})
 
-                AuditLog.objects.create(
-                    user=request.user,
-                    action="BULK_ENTITLEMENT_CSV_IMPORT",
-                    details=f"Imported {imported_count} farmer entitlements for Season ID {season_id}."
-                )
-                messages.success(request, f"ගොවි වාර්තා සහ කෝටා {imported_count}ක් සාර්ථකව CSV මඟින් ඇතුළත් කරන ලදී!")
+                    # 3. Check Product Existence
+                    product = None
+                    if raw_product:
+                        product = FertilizerProduct.objects.filter(name__iexact=raw_product).first()
+                        if not product:
+                            row_errors.append(_("Product '%(prod)s' was not found.") % {'prod': raw_product})
+                    else:
+                        row_errors.append(_("Product name is required."))
+
+                    # 4. Check Quantity
+                    qty_val = None
+                    try:
+                        qty_val = Decimal(raw_qty)
+                        if qty_val <= 0:
+                            row_errors.append(_("Quantity must be greater than 0 kg."))
+                    except Exception:
+                        row_errors.append(_("Invalid numeric quantity: '%(qty)s'.") % {'qty': raw_qty})
+
+                    is_valid = len(row_errors) == 0
+                    if is_valid:
+                        valid_count += 1
+                    else:
+                        has_errors = True
+                        error_count += 1
+
+                    validated_rows.append({
+                        'row_num': row_idx,
+                        'nic': clean_nic or raw_nic,
+                        'farmer_name': farmer.full_name if farmer else "-",
+                        'product_name': product.name if product else raw_product,
+                        'product_id': product.id if product else None,
+                        'farmer_id': farmer.id if farmer else None,
+                        'quantity_kg': str(qty_val) if qty_val is not None else raw_qty,
+                        'is_valid': is_valid,
+                        'errors': row_errors,
+                    })
+
+                if not validated_rows:
+                    messages.error(request, _("The uploaded CSV file is empty."))
+                    return redirect('manage_farmers')
+
+                request.session['entitlement_csv_preview'] = {
+                    'season_id': season.id,
+                    'season_name': season.name,
+                    'rows': validated_rows,
+                    'has_errors': has_errors,
+                    'valid_count': valid_count,
+                    'error_count': error_count,
+                }
+                return redirect('preview_entitlement_csv')
+
             except Exception as e:
-                messages.error(request, f"CSV ගොනුව කියවීමේදී දෝෂයක් ඇති විය: {e}")
+                messages.error(request, _("Error reading CSV file: %(err)s") % {'err': str(e)})
+                return redirect('manage_farmers')
 
-            return redirect('manage_farmers')
-
-        # B. තනි ගොවියෙකු ලියාපදිංචි කිරීම (Single Registration - FR-A3)
+        # B. Single Farmer Registration (Strict NIC & Mobile Validation, Account starts INACTIVE)
         elif action == 'register_single_farmer':
             nic = request.POST.get('nic_number', '').strip()
             full_name = request.POST.get('full_name', '').strip()
@@ -625,66 +670,115 @@ def manage_farmers_and_bulk_import_view(request):
             arpa = request.POST.get('arpa_division', '').strip()
             season_id = request.POST.get('season')
             product_id = request.POST.get('product')
-            quota_kg = Decimal(request.POST.get('approved_kg', '50.00'))
+
+            # 1. Validate Sri Lankan NIC format
+            try:
+                clean_nic = validate_sri_lankan_nic(nic)
+            except ValidationError as e:
+                messages.error(request, e.message if hasattr(e, 'message') else str(e))
+                return redirect('manage_farmers')
+
+            # 2. Check NIC uniqueness
+            if Farmer.objects.filter(nic_number__iexact=clean_nic).exists() or User.objects.filter(username__iexact=clean_nic).exists():
+                messages.error(request, _("A farmer with NIC '%(nic)s' is already registered.") % {'nic': clean_nic})
+                return redirect('manage_farmers')
+
+            # 3. Validate Sri Lankan Mobile format
+            try:
+                clean_mobile = validate_sri_lankan_phone(mobile)
+            except ValidationError as e:
+                messages.error(request, e.message if hasattr(e, 'message') else str(e))
+                return redirect('manage_farmers')
+
+            # 4. Validate quota
+            try:
+                quota_kg = Decimal(request.POST.get('approved_kg', '50.00').strip())
+                if quota_kg <= 0:
+                    raise ValueError()
+            except Exception:
+                messages.error(request, _("Quota must be a valid positive number."))
+                return redirect('manage_farmers')
 
             with transaction.atomic():
-                user_obj, created = User.objects.get_or_create(
-                    username=nic,
-                    defaults={
-                        'role': 'FARMER',
-                        'is_account_active': False,
-                        'asc_centre': request.user.asc_centre
-                    }
+                # Account starts INACTIVE (must activate via simulated SMS OTP)
+                user_obj = User.objects.create(
+                    username=clean_nic,
+                    role=User.RoleChoices.FARMER,
+                    is_account_active=False,
+                    asc_centre=request.user.asc_centre if request.user.asc_centre else None
                 )
-                if created:
-                    user_obj.set_unusable_password()
-                    user_obj.save()
+                user_obj.set_unusable_password()
+                user_obj.save()
 
-                farmer_obj, _ = Farmer.objects.update_or_create(
-                    nic_number=nic,
-                    defaults={
-                        'user': user_obj,
-                        'full_name': full_name,
-                        'mobile_number': mobile,
-                        'arpa_division': arpa,
-                    }
+                farmer_obj = Farmer.objects.create(
+                    user=user_obj,
+                    nic_number=clean_nic,
+                    full_name=full_name,
+                    mobile_number=clean_mobile,
+                    arpa_division=arpa,
                 )
 
-                FarmerEntitlement.objects.update_or_create(
-                    farmer=farmer_obj,
-                    season_id=season_id,
-                    product_id=product_id,
-                    defaults={'approved_kg': quota_kg, 'remaining_kg': quota_kg}
-                )
+                if season_id and product_id:
+                    FarmerEntitlement.objects.create(
+                        farmer=farmer_obj,
+                        season_id=season_id,
+                        product_id=product_id,
+                        approved_kg=quota_kg,
+                        remaining_kg=quota_kg
+                    )
 
                 AuditLog.objects.create(
                     user=request.user,
                     action="FARMER_REGISTERED",
-                    details=f"Registered farmer {full_name} (NIC: {nic}) with {quota_kg}kg entitlement."
+                    details=f"Registered farmer {full_name} (NIC: {clean_nic}, Phone: {mask_phone_number(clean_mobile)}). Initial status: INACTIVE (Pending OTP activation)."
                 )
-            messages.success(request, f"{full_name} ({nic}) ගොවි මහතා/මහත්මිය සාර්ථකව ලියාපදිංචි කරන ලදී. දැන් OTP මඟින් ගිණුම සක්‍රිය කළ හැක.")
+
+            messages.success(
+                request,
+                _("Farmer %(name)s (%(nic)s) registered successfully! Account is INACTIVE until activated via OTP.")
+                % {'name': full_name, 'nic': clean_nic}
+            )
             return redirect('manage_farmers')
 
-        # C. ගොවියාගේ දුරකථන අංකය නිලධාරියා විසින් ආරක්ෂිතව වෙනස් කිරීම
+        # C. Phone Number Update by ASC Officer (Requires In-Person NIC Verification, Masked Audit Log)
         elif action == 'update_phone':
             nic = request.POST.get('nic_number', '').strip()
             new_mobile = request.POST.get('new_mobile', '').strip()
             reason = request.POST.get('reason', 'In-person NIC verification at ASC').strip()
+            in_person_verified = request.POST.get('in_person_verified') == 'on'
 
-            farmer_obj = Farmer.objects.filter(nic_number=nic).first()
+            if not in_person_verified:
+                messages.error(request, _("Security policy requires confirming in-person verification of the original National Identity Card."))
+                return redirect('manage_farmers')
+
+            farmer_obj = Farmer.objects.filter(nic_number__iexact=nic).first()
             if not farmer_obj:
-                messages.error(request, "මෙම NIC අංකයට අදාළ ගොවියෙකු හමු නොවීය.")
-            else:
-                old_mobile = farmer_obj.mobile_number
-                farmer_obj.mobile_number = new_mobile
-                farmer_obj.save()
+                messages.error(request, _("No registered farmer found with NIC '%(nic)s'.") % {'nic': nic})
+                return redirect('manage_farmers')
 
-                AuditLog.objects.create(
-                    user=request.user,
-                    action="FARMER_PHONE_UPDATED",
-                    details=f"NIC {nic}: Phone changed from {old_mobile} to {new_mobile}. Reason: {reason}"
+            try:
+                clean_new_mobile = validate_sri_lankan_phone(new_mobile)
+            except ValidationError as e:
+                messages.error(request, e.message if hasattr(e, 'message') else str(e))
+                return redirect('manage_farmers')
+
+            old_mobile = farmer_obj.mobile_number
+            farmer_obj.mobile_number = clean_new_mobile
+            farmer_obj.save()
+
+            AuditLog.objects.create(
+                user=request.user,
+                action="FARMER_PHONE_UPDATED",
+                details=(
+                    f"NIC {farmer_obj.masked_nic}: Phone changed from {mask_phone_number(old_mobile)} "
+                    f"to {mask_phone_number(clean_new_mobile)}. In-person verification: Verified. Reason: {reason}"
                 )
-                messages.success(request, f"NIC {nic} හිමි ගොවියාගේ දුරකථන අංකය {new_mobile} ලෙස යාවත්කාලීන කර Audit Log හි සටහන් කරන ලදී.")
+            )
+            messages.success(
+                request,
+                _("Phone number for farmer %(nic)s updated to %(phone)s and recorded in audit log.")
+                % {'nic': farmer_obj.masked_nic, 'phone': clean_new_mobile}
+            )
             return redirect('manage_farmers')
 
     context = {
@@ -693,6 +787,131 @@ def manage_farmers_and_bulk_import_view(request):
         'farmers_list': farmers_list,
     }
     return render(request, 'distributions/manage_farmers.html', context)
+
+
+@role_required('ADMIN', 'ASC_OFFICER')
+def preview_entitlement_csv_view(request):
+    """
+    Phase 2 of CSV Import:
+    Render preview table with invalid rows highlighted in red and specific errors displayed.
+    Enforces all-or-nothing atomic commit (commits only if 100% of rows are valid).
+    """
+    preview_data = request.session.get('entitlement_csv_preview')
+    if not preview_data:
+        messages.warning(request, _("No CSV preview session found. Please upload a CSV file."))
+        return redirect('manage_farmers')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'cancel':
+            request.session.pop('entitlement_csv_preview', None)
+            messages.info(request, _("CSV import cancelled."))
+            return redirect('manage_farmers')
+
+        elif action == 'confirm_import':
+            if preview_data.get('has_errors'):
+                messages.error(
+                    request,
+                    _("Cannot import: The file contains errors. All-or-nothing policy requires correcting all errors before import.")
+                )
+                return render(request, 'distributions/entitlement_csv_preview.html', {'preview': preview_data})
+
+            season_id = preview_data['season_id']
+            rows = preview_data['rows']
+            imported_count = 0
+
+            with transaction.atomic():
+                for r in rows:
+                    FarmerEntitlement.objects.update_or_create(
+                        farmer_id=r['farmer_id'],
+                        season_id=season_id,
+                        product_id=r['product_id'],
+                        defaults={
+                            'approved_kg': Decimal(r['quantity_kg']),
+                            'remaining_kg': Decimal(r['quantity_kg']),
+                        }
+                    )
+                    imported_count += 1
+
+                AuditLog.objects.create(
+                    user=request.user,
+                    action="BULK_ENTITLEMENT_CSV_IMPORT",
+                    details=f"All-or-nothing atomic import: {imported_count} entitlements committed for Season ID {season_id}."
+                )
+
+            request.session.pop('entitlement_csv_preview', None)
+            messages.success(
+                request,
+                _("All-or-nothing atomic import successful! %(count)d farmer entitlements created/updated.") % {'count': imported_count}
+            )
+            return redirect('manage_farmers')
+
+    return render(request, 'distributions/entitlement_csv_preview.html', {'preview': preview_data})
+
+
+@role_required('ADMIN', 'ASC_OFFICER', 'AUDITOR')
+def download_sample_entitlement_csv(request):
+    """
+    Download sample UTF-8 CSV with BOM for farmer entitlements (nic, product, quantity_kg).
+    """
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = 'attachment; filename="fertitracker_sample_entitlements.csv"'
+    response.write('\ufeff')
+    writer = csv.writer(response)
+    writer.writerow(['nic', 'product', 'quantity_kg'])
+    writer.writerow(['198512345678', 'Urea', '50.00'])
+    writer.writerow(['199023456789', 'Urea', '100.00'])
+    writer.writerow(['751234567V', 'TSP', '50.00'])
+    writer.writerow(['197812345678', 'MOP', '50.00'])
+    return response
+
+
+@role_required('ADMIN', 'ASC_OFFICER')
+def edit_entitlement_view(request, entitlement_id):
+    """
+    Edit individual farmer entitlement quota.
+    Every change records old and new values in the immutable AuditLog.
+    """
+    entitlement = get_object_or_404(
+        FarmerEntitlement.objects.select_related('farmer', 'season', 'product'),
+        id=entitlement_id
+    )
+
+    if request.method == 'POST':
+        try:
+            new_approved_kg = Decimal(request.POST.get('approved_kg', '0').strip())
+            if new_approved_kg <= 0:
+                raise ValidationError(_("Approved quota must be greater than 0 kg."))
+        except Exception:
+            messages.error(request, _("Please enter a valid positive number for approved quota."))
+            return render(request, 'distributions/edit_entitlement.html', {'entitlement': entitlement})
+
+        old_approved = entitlement.approved_kg
+        old_remaining = entitlement.remaining_kg
+        delta = new_approved_kg - old_approved
+        new_remaining = max(Decimal('0.00'), old_remaining + delta)
+
+        entitlement.approved_kg = new_approved_kg
+        entitlement.remaining_kg = new_remaining
+        entitlement.save()
+
+        AuditLog.objects.create(
+            user=request.user,
+            action="ENTITLEMENT_EDITED",
+            details=(
+                f"Farmer {entitlement.farmer.masked_nic} quota for {entitlement.product.name} ({entitlement.season.name}) "
+                f"updated by {request.user.username}: Approved {old_approved}kg -> {new_approved_kg}kg, "
+                f"Remaining {old_remaining}kg -> {new_remaining}kg."
+            )
+        )
+        messages.success(
+            request,
+            _("Entitlement updated! Approved: %(old)skg -> %(new)skg.") % {'old': old_approved, 'new': new_approved_kg}
+        )
+        return redirect('manage_farmers')
+
+    return render(request, 'distributions/edit_entitlement.html', {'entitlement': entitlement})
 
 
 # ==============================================================================

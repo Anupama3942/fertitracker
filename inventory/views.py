@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+from datetime import timedelta
+from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.contrib import messages
@@ -21,7 +22,7 @@ def inventory_list_view(request):
         dispatches = dispatches.filter(asc_centre=user.asc_centre)
         stocks = stocks.filter(asc_centre=user.asc_centre)
 
-    today = date.today()
+    today = timezone.localdate()
     near_expiry_threshold = today + timedelta(days=30)
     for stock in stocks:
         if stock.batch.expiry_date < today:

@@ -192,7 +192,7 @@ def verify_farmer_token(raw_input_string, asc_officer_user, season_id):
         raise ValidationError(f"Farmer {farmer.full_name} has already exhausted their fertilizer quota for this season.")
 
     # Check available stock (FEFO: Earliest expiry first, skip expired batches)
-    today = timezone.now().date()
+    today = timezone.localdate()
     unexpired_stocks = list(ASCStock.objects.filter(
         asc_centre=asc_centre,
         batch__product=entitlement.product,
@@ -422,7 +422,7 @@ def confirm_issue_distribution(raw_input_string=None, asc_officer_user=None, sea
         raise ValidationError(f"The farmer's remaining quota ({entitlement.remaining_kg} kg) is less than requested ({issue_kg} kg).")
 
     # Acquire row-level locks on candidate ASC stocks using FEFO (Earliest expiry date first, skip expired batches)
-    today = timezone.now().date()
+    today = timezone.localdate()
     candidate_stocks = list(ASCStock.objects.select_for_update().filter(
         asc_centre=asc_centre,
         batch__product=entitlement.product,

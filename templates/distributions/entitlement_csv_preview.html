@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Banner -->
+  <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">📑</span>
+        <h1 class="text-2xl font-black text-slate-800">
+          {% trans "CSV Entitlement Import Preview" %}
+        </h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        {% trans "Target Cultivation Season:" %} <strong class="text-emerald-800 font-bold">{{ preview.season_name }}</strong>
+        &bull; {% trans "All-or-Nothing Validation Check" %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800">
+        ✓ {{ preview.valid_count }} {% trans "Valid" %}
+      </span>
+      {% if preview.error_count > 0 %}
+      <span class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-100 text-rose-800">
+        ⚠️ {{ preview.error_count }} {% trans "Errors" %}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Status Alert Banner -->
+  {% if preview.has_errors %}
+  <div class="bg-rose-50 border-2 border-rose-300 p-4 rounded-2xl text-rose-900 text-sm flex items-start gap-3">
+    <span class="text-2xl">⛔</span>
+    <div>
+      <h3 class="font-black text-base">{% trans "Validation Errors Detected — Import Blocked" %}</h3>
+      <p class="mt-1">
+        {% trans "FertiTracker enforces an all-or-nothing atomic import policy to maintain quota integrity. Because one or more rows below contain validation errors, the import cannot proceed. Please correct the CSV file and re-upload." %}
+      </p>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-emerald-50 border-2 border-emerald-300 p-4 rounded-2xl text-emerald-900 text-sm flex items-start gap-3">
+    <span class="text-2xl">✅</span>
+    <div>
+      <h3 class="font-black text-base">{% trans "All Rows Validated Successfully" %}</h3>
+      <p class="mt-1">
+        {% trans "All farmer NICs, fertilizer products, and quota quantities are valid. Click 'Confirm All-or-Nothing Import' to commit these records atomically." %}
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Preview Table -->
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-slate-600 font-bold uppercase text-xs border-b">
+          <tr>
+            <th class="p-3 w-16">{% trans "Row" %}</th>
+            <th class="p-3">{% trans "NIC Number" %}</th>
+            <th class="p-3">{% trans "Farmer Name" %}</th>
+            <th class="p-3">{% trans "Product" %}</th>
+            <th class="p-3 text-right">{% trans "Quantity (kg)" %}</th>
+            <th class="p-3">{% trans "Status" %}</th>
+            <th class="p-3">{% trans "Validation Notes" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for r in preview.rows %}
+          <tr class="transition {% if not r.is_valid %}bg-rose-50/70 border-l-4 border-l-rose-600{% else %}hover:bg-slate-50{% endif %}">
+            <td class="p-3 font-mono text-xs text-slate-500 font-bold">#{{ r.row_num }}</td>
+            <td class="p-3 font-mono font-bold text-slate-800">{{ r.nic }}</td>
+            <td class="p-3 text-slate-700 font-medium">{{ r.farmer_name }}</td>
+            <td class="p-3 text-slate-700 font-medium">{{ r.product_name }}</td>
+            <td class="p-3 text-right font-mono font-bold text-slate-800">{{ r.quantity_kg }} kg</td>
+            <td class="p-3">
+              {% if r.is_valid %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                  ✓ {% trans "Valid" %}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                  ✗ {% trans "Error" %}
+                </span>
+              {% endif %}
+            </td>
+            <td class="p-3">
+              {% if r.is_valid %}
+                <span class="text-xs text-slate-500">{% trans "Ready for import" %}</span>
+              {% else %}
+                <ul class="text-xs text-rose-700 font-semibold list-disc list-inside space-y-0.5">
+                  {% for err in r.errors %}
+                    <li>{{ err }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-6 pt-4 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancel">
+        <button type="submit" class="touch-target px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
+          ⬅️ {% trans "Cancel & Upload Different File" %}
+        </button>
+      </form>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm_import">
+        {% if preview.has_errors %}
+          <button type="button" disabled class="touch-target px-6 py-3 bg-slate-300 text-slate-500 font-bold rounded-xl text-sm cursor-not-allowed shadow-none">
+            🔒 {% trans "Import Blocked (Correct Errors First)" %}
+          </button>
+        {% else %}
+          <button type="submit" class="touch-target px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black rounded-xl text-sm shadow transition flex items-center gap-2">
+            <span>💾</span> {% trans "Confirm All-or-Nothing Import" %} ({{ preview.valid_count }})
+          </button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

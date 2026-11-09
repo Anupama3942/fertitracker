@@ -42,13 +42,7 @@ class FarmerEntitlement(models.Model):
         return f"{self.farmer.full_name} | {self.season.name} | {self.product.name}: {self.remaining_kg}/{self.approved_kg} kg"
 
 
-import hmac
-from django.conf import settings
-
-def compute_code_hmac(raw_code: str) -> str:
-    """Compute HMAC-SHA256 of a 6-digit code using the server's OTP secret key."""
-    secret = getattr(settings, 'OTP_SECRET_KEY', getattr(settings, 'SECRET_KEY', 'fertitracker-secret')).encode('utf-8')
-    return hmac.new(secret, str(raw_code).strip().encode('utf-8'), hashlib.sha256).hexdigest()
+from core.security import compute_code_hmac
 
 class QRToken(models.Model):
     class ChannelChoices(models.TextChoices):
