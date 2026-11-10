@@ -22,6 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
     path('', include('accounts.urls')),
+    path('accounts/', include('accounts.urls')),
     path('inventory/', include('inventory.urls')),
     path('distributions/', include('distributions.urls')),
     path('farmer/dashboard/', RedirectView.as_view(url='/distributions/farmer/dashboard/', permanent=False)),
