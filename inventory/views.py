@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db.models import Sum
 from accounts.decorators import role_required
 from core.models import Warehouse, ASCCentre, FertilizerProduct
 from .models import FertilizerBatch, StockDispatch, DispatchItem, ASCStock, StockMovement
@@ -193,6 +194,9 @@ def discrepancy_report_view(request):
                 d.created_at.strftime('%Y-%m-%d %H:%M')
             ])
         return response
+
+    total_damaged = discrepancies.aggregate(total=Sum('damaged_bags'))['total'] or 0
+    total_missing = discrepancies.aggregate(total=Sum('missing_bags'))['total'] or 0
 
     context = {
         'discrepancies': discrepancies,
