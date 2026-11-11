@@ -122,37 +122,84 @@
         </div>
     </div>
 
-    <!-- Registered Farmers Table (with Masked NIC & Quota Edit Links) -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-        <div class="flex justify-between items-center mb-4 border-b pb-3">
+    <!-- Registered Farmers List (Mobile Cards + Desktop Table) -->
+    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-4 border-b pb-3">
             <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
                 <span>📋</span> {% trans "Registered Farmers & Seasonal Quotas" %}
             </h2>
-            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
                 {{ farmers_list.count }} {% trans "Farmers shown" %}
             </span>
         </div>
 
-        <div class="overflow-x-auto">
+        <!-- Mobile Card View -->
+        <div class="md:hidden space-y-3">
+            {% for f in farmers_list %}
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+                <div class="flex justify-between items-start gap-2">
+                    <div class="min-w-0">
+                        <p class="font-black text-slate-900 text-base leading-snug">{{ f.full_name }}</p>
+                        <p class="font-mono text-xs font-bold text-slate-600 mt-0.5">{{ f.masked_nic }}</p>
+                    </div>
+                    {% if f.user and f.user.is_account_active %}
+                        <span class="shrink-0 bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap">
+                            ✓ {% trans "Active" %}
+                        </span>
+                    {% else %}
+                        <span class="shrink-0 bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap">
+                            ⏳ {% trans "Pending Activation" %}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                    <span class="font-mono">📱 {{ f.mobile_number|default:"-" }}</span>
+                    <span>📍 {{ f.arpa_division|default:"-" }}</span>
+                </div>
+
+                <div class="pt-2 border-t border-slate-200/80 space-y-1.5">
+                    {% for ent in f.entitlements.all %}
+                    <div class="flex items-center justify-between gap-2 bg-white border border-slate-200 px-3 py-2 rounded-lg text-xs">
+                        <div>
+                            <span class="font-bold text-slate-800">{{ ent.product.name }}:</span>
+                            <span class="font-mono text-emerald-700 font-bold ml-1">{{ ent.remaining_kg }}</span>/{{ ent.approved_kg }} kg
+                        </div>
+                        <a href="{% url 'edit_entitlement' ent.id %}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-md whitespace-nowrap">
+                            ✏️ {% trans "Edit" %}
+                        </a>
+                    </div>
+                    {% empty %}
+                    <span class="text-xs text-slate-400">{% trans "No quotas assigned" %}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="p-4 text-center text-slate-400 text-sm">{% trans "No farmers registered yet." %}</p>
+            {% endfor %}
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead class="bg-slate-50 text-slate-600 font-bold uppercase text-xs border-b">
                     <tr>
-                        <th class="p-3">{% trans "Farmer" %}</th>
-                        <th class="p-3">{% trans "Masked NIC" %}</th>
-                        <th class="p-3">{% trans "Mobile" %}</th>
-                        <th class="p-3">{% trans "ARPA Division" %}</th>
-                        <th class="p-3">{% trans "Account State" %}</th>
-                        <th class="p-3">{% trans "Seasonal Entitlements" %}</th>
+                        <th class="p-3 whitespace-nowrap">{% trans "Farmer" %}</th>
+                        <th class="p-3 whitespace-nowrap">{% trans "Masked NIC" %}</th>
+                        <th class="p-3 whitespace-nowrap">{% trans "Mobile" %}</th>
+                        <th class="p-3 whitespace-nowrap">{% trans "ARPA Division" %}</th>
+                        <th class="p-3 whitespace-nowrap">{% trans "Account State" %}</th>
+                        <th class="p-3 whitespace-nowrap">{% trans "Seasonal Entitlements" %}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     {% for f in farmers_list %}
                     <tr class="hover:bg-slate-50 transition">
-                        <td class="p-3 font-bold text-slate-800">{{ f.full_name }}</td>
-                        <td class="p-3 font-mono text-xs font-bold text-slate-700">{{ f.masked_nic }}</td>
-                        <td class="p-3 font-mono text-xs text-slate-600">{{ f.mobile_number|default:"-" }}</td>
+                        <td class="p-3 font-bold text-slate-800 whitespace-nowrap">{{ f.full_name }}</td>
+                        <td class="p-3 font-mono text-xs font-bold text-slate-700 whitespace-nowrap">{{ f.masked_nic }}</td>
+                        <td class="p-3 font-mono text-xs text-slate-600 whitespace-nowrap">{{ f.mobile_number|default:"-" }}</td>
                         <td class="p-3 text-slate-600 text-xs">{{ f.arpa_division }}</td>
-                        <td class="p-3">
+                        <td class="p-3 whitespace-nowrap">
                             {% if f.user and f.user.is_account_active %}
                                 <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-bold">
                                     ✓ {% trans "Active" %}
@@ -166,7 +213,7 @@
                         <td class="p-3">
                             <div class="flex flex-wrap gap-1.5">
                                 {% for ent in f.entitlements.all %}
-                                <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs">
+                                <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs whitespace-nowrap">
                                     <span class="font-bold text-slate-700">{{ ent.product.name }}:</span>
                                     <span class="font-mono text-emerald-700 font-bold">{{ ent.remaining_kg }}</span>/{{ ent.approved_kg }}kg
                                     <a href="{% url 'edit_entitlement' ent.id %}" class="text-emerald-700 hover:text-emerald-900 font-bold underline ml-1">
