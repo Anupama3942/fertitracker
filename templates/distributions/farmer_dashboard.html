@@ -2,46 +2,83 @@
 {% load i18n static %}
 
 {% block content %}
-<div id="farmer-app" class="max-w-4xl mx-auto space-y-6 text-base">
+<div id="farmer-app" class="max-w-4xl mx-auto space-y-5 pb-24 sm:pb-8 text-base">
 
-  <!-- Accessibility Font Size Toggle Bar -->
-  <div class="flex justify-end items-center">
-    <button
-      type="button"
-      onclick="toggleLargeFont()"
-      class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-4 py-2 rounded-xl text-sm shadow transition flex items-center gap-1.5 touch-target"
-    >
-      <span>🔍 A+</span>
-      <span>{% trans "Toggle Size" %}</span>
-    </button>
-  </div>
-
-  <!-- Farmer Welcome Header -->
-  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-    <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
+  <!-- Top Farmer Identity & Profile Card -->
+  <section class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div class="space-y-1.5 min-w-0">
+      <div class="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-900 px-3 py-1 rounded-full font-bold text-xs border border-emerald-200">
+        <span aria-hidden="true">📍</span>
+        <span>{{ farmer.arpa_division|default:"Vavuniya South ASC" }}</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
         {% trans "Welcome" %}, {{ farmer.full_name }}
       </h1>
-      <p class="text-sm md:text-base text-slate-600 mt-1">
-        <span>{% trans "NIC" %}:</span>
-        <strong class="font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{{ farmer.masked_nic }}</strong>
-        <span class="mx-2">&bull;</span>
-        <span>{% trans "Mobile" %}:</span>
-        <strong class="font-mono text-slate-900">{{ farmer.mobile_number }}</strong>
-      </p>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+        <span>
+          {% trans "NIC" %}:
+          <strong class="font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{{ farmer.masked_nic }}</strong>
+        </span>
+        <span>
+          {% trans "Mobile" %}:
+          <strong class="font-mono text-slate-900">{{ farmer.mobile_number }}</strong>
+        </span>
+      </div>
     </div>
-    <span class="bg-emerald-100 text-emerald-900 px-3.5 py-1.5 rounded-xl font-bold text-sm border border-emerald-300 flex items-center gap-1">
-      📍 {{ farmer.arpa_division|default:"Vavuniya South ASC" }}
-    </span>
-  </div>
+  </section>
 
-  <!-- Dynamic 60-Second Secure QR Code & 6-Digit Backup Code -->
-  <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border-2 border-emerald-600 text-center space-y-4">
+  <!-- 4-Button Mobile Quick Access Grid (Large Touch Targets >= 48px) -->
+  <nav aria-label="{% trans 'Quick Actions' %}" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <!-- Quick Action 1: Direct 1-Tap QR Generator -->
+    <form method="post" class="contents">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="touch-target min-h-[76px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 active:scale-[0.98] text-white font-extrabold rounded-2xl p-3.5 shadow-sm transition flex flex-col items-center justify-center gap-1.5 text-center border border-emerald-800"
+      >
+        <span class="text-2xl" aria-hidden="true">⚡</span>
+        <span class="text-sm leading-tight">{% trans "Get QR Code" %}</span>
+      </button>
+    </form>
+
+    <!-- Quick Action 2: Jump to Quotas -->
+    <a
+      href="#section-quotas"
+      class="touch-target min-h-[76px] bg-white hover:bg-emerald-50 active:scale-[0.98] text-slate-800 font-bold rounded-2xl p-3.5 shadow-sm transition flex flex-col items-center justify-center gap-1.5 text-center border-2 border-slate-200 hover:border-emerald-400"
+    >
+      <span class="text-2xl" aria-hidden="true">🌾</span>
+      <span class="text-sm leading-tight">{% trans "My Quotas" %}</span>
+    </a>
+
+    <!-- Quick Action 3: Jump to Receipts -->
+    <a
+      href="#section-receipts"
+      class="touch-target min-h-[76px] bg-white hover:bg-emerald-50 active:scale-[0.98] text-slate-800 font-bold rounded-2xl p-3.5 shadow-sm transition flex flex-col items-center justify-center gap-1.5 text-center border-2 border-slate-200 hover:border-emerald-400"
+    >
+      <span class="text-2xl" aria-hidden="true">🧾</span>
+      <span class="text-sm leading-tight">{% trans "My Receipts" %}</span>
+    </a>
+
+    <!-- Quick Action 4: Accessible Large Font Toggle -->
+    <button
+      id="font-toggle-btn"
+      type="button"
+      aria-pressed="false"
+      onclick="toggleLargeFont()"
+      class="touch-target min-h-[76px] bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-slate-950 font-extrabold rounded-2xl p-3.5 shadow-sm transition flex flex-col items-center justify-center gap-1.5 text-center border border-amber-500"
+    >
+      <span class="text-xl font-black" aria-hidden="true">A+</span>
+      <span class="text-sm leading-tight">{% trans "Toggle Size" %}</span>
+    </button>
+  </nav>
+
+  <!-- Section 1: Dynamic 60-Second Secure QR Code & 6-Digit Backup Code -->
+  <section id="section-qr" class="scroll-mt-4 bg-white p-5 sm:p-8 rounded-2xl shadow-sm border-2 border-emerald-600 text-center space-y-5">
     <div>
-      <h2 class="text-xl sm:text-2xl font-black text-emerald-900">
+      <h2 class="text-xl sm:text-2xl font-black text-emerald-950">
         {% trans "Dynamic 60-Second Secure QR Code" %}
       </h2>
-      <p class="text-sm text-slate-600 max-w-lg mx-auto mt-1">
+      <p class="text-sm text-slate-600 max-w-lg mx-auto mt-1.5">
         {% trans "Generate a single-use secure QR code before presenting at the counter. The code expires in 60 seconds." %}
       </p>
     </div>
@@ -50,41 +87,60 @@
       {% csrf_token %}
       <button
         type="submit"
-        class="touch-target bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-extrabold text-base px-8 py-3.5 rounded-xl shadow-md transition duration-150 inline-flex items-center gap-2"
+        class="touch-target w-full sm:w-auto min-h-[56px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 active:scale-[0.99] text-white font-extrabold text-base sm:text-lg px-8 py-3.5 rounded-2xl shadow-md transition duration-150 inline-flex items-center justify-center gap-2.5"
       >
-        <span>⚡</span>
+        <span aria-hidden="true">⚡</span>
         <span>{% trans "Generate Fresh QR Code" %}</span>
       </button>
     </form>
 
     {% if raw_token %}
-    <div class="mt-6 p-6 bg-slate-50 border-2 border-emerald-500 rounded-2xl inline-flex flex-col items-center max-w-full shadow-inner space-y-4">
-      <p class="text-sm font-bold text-emerald-900 flex items-center gap-1.5">
-        <span>📷</span> {% trans "Present this QR code to the ASC Officer" %}:
-      </p>
-      
-      <!-- Visual QR Code canvas container -->
-      <div id="qrcode" class="bg-white p-4 border-2 border-slate-200 rounded-2xl shadow"></div>
+    <div id="qr-active-card" class="mt-4 p-4 sm:p-6 bg-slate-50 border-2 border-emerald-500 rounded-2xl flex flex-col items-center max-w-md mx-auto shadow-inner space-y-4">
+      <!-- Live Countdown Pill & Bar -->
+      <div class="w-full space-y-1.5">
+        <div class="flex items-center justify-between text-xs font-bold">
+          <span class="text-emerald-900 flex items-center gap-1">
+            <span aria-hidden="true">📷</span> {% trans "Present this QR code to the ASC Officer" %}
+          </span>
+          <span id="qr-timer-badge" class="bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full font-mono">
+            ⏱️ <span id="qr-seconds">60</span>s
+          </span>
+        </div>
+        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+          <div id="qr-timer-bar" class="bg-emerald-600 h-full transition-all duration-1000 ease-linear" style="width: 100%"></div>
+        </div>
+      </div>
 
-      <!-- 6-Digit Backup OTP Code (Clean, Large, Readable for Officers) -->
-      <div class="bg-emerald-950 text-white p-4 rounded-xl w-full max-w-xs shadow text-center">
+      <!-- Visual QR Code Canvas -->
+      <div id="qr-wrapper" class="bg-white p-4 border-2 border-slate-200 rounded-2xl shadow-sm transition-opacity duration-300">
+        <div id="qrcode" class="flex justify-center"></div>
+      </div>
+
+      <!-- Expired Notice Overlay (Hidden initially, revealed at 0s) -->
+      <div id="qr-expired-alert" class="hidden w-full p-3 bg-rose-50 border border-rose-300 text-rose-900 rounded-xl text-sm font-bold">
+        ⚠️ {% trans "Expired — Please generate a new QR code" %}
+      </div>
+
+      <!-- 6-Digit Backup OTP Code -->
+      <div class="bg-emerald-950 text-white p-4 rounded-2xl w-full shadow text-center">
         <span class="text-xs uppercase tracking-widest text-emerald-300 block font-bold mb-1">
           {% trans "Backup 6-Digit Code" %}
         </span>
-        <div class="text-3xl font-mono font-extrabold tracking-widest text-amber-300 select-all">
+        <div class="text-3xl sm:text-4xl font-mono font-black tracking-[0.2em] text-amber-300 select-all">
           {{ raw_code|default:"------" }}
         </div>
-        <span class="text-[11px] text-emerald-200 mt-1 block">
+        <span class="text-xs text-emerald-200 mt-1.5 block">
           {% trans "Officer can type this code if camera fails" %}
         </span>
       </div>
 
-      <p class="text-xs sm:text-sm text-amber-700 font-semibold flex items-center gap-1">
-        <span>⚠️</span> {% trans "Expires in 60 seconds. Do not share screenshots." %}
+      <p class="text-xs text-amber-800 font-semibold flex items-center justify-center gap-1">
+        <span aria-hidden="true">⚠️</span>
+        <span>{% trans "Expires in 60 seconds. Do not share screenshots." %}</span>
       </p>
     </div>
 
-    <!-- Local Offline QRCode JS (Runs without internet) -->
+    <!-- Local Offline QRCode JS & Live 60s Countdown -->
     <script src="{% static 'vendor/qrcode.min.js' %}"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
@@ -94,137 +150,225 @@
           qrContainer.innerHTML = "";
           new QRCode(qrContainer, {
             text: rawToken,
-            width: 200,
-            height: 200,
+            width: 210,
+            height: 210,
             colorDark: "#064e3b",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H,
           });
+
+          // Live 60-second visual countdown timer
+          let secondsLeft = 60;
+          const secEl = document.getElementById("qr-seconds");
+          const badgeEl = document.getElementById("qr-timer-badge");
+          const barEl = document.getElementById("qr-timer-bar");
+          const wrapperEl = document.getElementById("qr-wrapper");
+          const expiredAlert = document.getElementById("qr-expired-alert");
+
+          const countdown = setInterval(function () {
+            secondsLeft -= 1;
+            if (secondsLeft <= 0) {
+              clearInterval(countdown);
+              secEl.textContent = "0";
+              barEl.style.width = "0%";
+              barEl.classList.replace("bg-emerald-600", "bg-rose-600");
+              badgeEl.classList.remove("bg-emerald-100", "text-emerald-900", "border-emerald-300");
+              badgeEl.classList.add("bg-rose-100", "text-rose-900", "border-rose-300");
+              wrapperEl.classList.add("opacity-30");
+              expiredAlert.classList.remove("hidden");
+            } else {
+              secEl.textContent = secondsLeft;
+              barEl.style.width = ((secondsLeft / 60) * 100) + "%";
+              if (secondsLeft <= 15) {
+                barEl.classList.replace("bg-emerald-600", "bg-amber-500");
+              }
+            }
+          }, 1000);
         }
       });
     </script>
     {% endif %}
-  </div>
+  </section>
 
-  <!-- Seasonal Entitlements (Quotas) -->
-  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-    <h2 class="text-lg sm:text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
-      <span>🌾</span> {% trans "My Seasonal Entitlements (Quotas)" %}
-    </h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse text-sm sm:text-base">
-        <thead>
-          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "Season" %}</th>
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "Fertilizer" %}</th>
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "Approved Quota" %}</th>
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "Remaining Quota" %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for ent in entitlements %}
-          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-            <td class="p-3 font-medium">{{ ent.season.name }}</td>
-            <td class="p-3 font-bold text-slate-800">{{ ent.product.name }}</td>
-            <td class="p-3 font-mono text-slate-600">{{ ent.approved_kg }} kg</td>
-            <td class="p-3 font-mono font-black {% if ent.remaining_kg > 0 %}text-emerald-700{% else %}text-slate-400{% endif %}">
-              {{ ent.remaining_kg }} kg
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="p-4 text-center text-slate-500">
-              {% trans "No fertilizer quotas recorded for this account." %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- Section 2: Seasonal Entitlements (Mobile-First Progress Cards) -->
+  <section id="section-quotas" class="scroll-mt-4 bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h2 class="text-lg sm:text-xl font-black text-slate-800 flex items-center gap-2">
+        <span aria-hidden="true">🌾</span>
+        <span>{% trans "My Seasonal Entitlements (Quotas)" %}</span>
+      </h2>
     </div>
-  </div>
 
-  <!-- Simulated SMS Receipt Notification (Fixed Single-Line Template Tags) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for ent in entitlements %}
+      <article class="p-4 sm:p-5 rounded-2xl border-2 {% if ent.remaining_kg > 0 %}border-emerald-200 bg-emerald-50/40{% else %}border-slate-200 bg-slate-50{% endif %} flex flex-col justify-between space-y-3">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <span class="inline-block text-xs font-bold bg-white text-slate-700 border border-slate-200 px-2.5 py-0.5 rounded-full mb-1">
+              {{ ent.season.name }}
+            </span>
+            <h3 class="text-lg font-extrabold text-slate-900">{{ ent.product.name }}</h3>
+          </div>
+          {% if ent.remaining_kg > 0 %}
+            <span class="text-xs font-extrabold bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-lg border border-emerald-300 shrink-0">
+              ✅ {% trans "Available" %}
+            </span>
+          {% else %}
+            <span class="text-xs font-extrabold bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg shrink-0">
+              {% trans "Completed" %}
+            </span>
+          {% endif %}
+        </div>
+
+        <div>
+          <div class="flex items-baseline justify-between mb-1.5">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Remaining" %}</span>
+            <span class="text-2xl font-mono font-black {% if ent.remaining_kg > 0 %}text-emerald-700{% else %}text-slate-400{% endif %}">
+              {{ ent.remaining_kg }} kg
+            </span>
+          </div>
+          <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+            <div
+              class="{% if ent.remaining_kg > 0 %}bg-emerald-600{% else %}bg-slate-400{% endif %} h-full rounded-full"
+              style="width: {% widthratio ent.remaining_kg ent.approved_kg 100 %}%;"
+            ></div>
+          </div>
+          <div class="flex justify-between items-center text-xs text-slate-600 mt-1.5 font-medium">
+            <span>{% trans "Approved Quota" %}:</span>
+            <span class="font-mono font-bold text-slate-800">{{ ent.approved_kg }} kg</span>
+          </div>
+        </div>
+      </article>
+      {% empty %}
+      <div class="col-span-full p-6 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+        {% trans "No fertilizer quotas recorded for this account." %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Simulated SMS Receipt Notification -->
   {% if latest_issue %}
-  <div class="bg-amber-50 p-5 rounded-2xl border border-amber-300 shadow-sm space-y-2">
-    <div class="flex justify-between items-center">
+  <section class="bg-amber-50 p-4 sm:p-5 rounded-2xl border border-amber-300 shadow-sm space-y-2">
+    <div class="flex flex-wrap justify-between items-center gap-2">
       <span class="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
-        <span>📱</span> {% trans "SIMULATED SMS RECEIPT" %} ({{ farmer.mobile_number }})
+        <span aria-hidden="true">📱</span> {% trans "SIMULATED SMS RECEIPT" %} ({{ farmer.mobile_number }})
       </span>
-      <span class="text-xs text-slate-500">
+      <span class="text-xs text-slate-600 font-mono">
         {{ latest_issue.distributed_at|date:"Y-m-d H:i" }}
       </span>
     </div>
     <div class="font-mono text-xs sm:text-sm bg-white p-3.5 rounded-xl border border-amber-200 text-slate-800 shadow-inner">
       <strong>FertiTracker Alert:</strong> {{ latest_issue.quantity_kg }}kg of {{ latest_issue.batch.product.name }} issued at {{ latest_issue.asc_centre.name }}. Receipt No: <strong>{{ latest_issue.receipt_number }}</strong>.
     </div>
-  </div>
+  </section>
   {% endif %}
 
-  <!-- Farmer Issue History & Digital Receipts -->
-  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-    <h2 class="text-lg sm:text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
-      <span>📜</span> {% trans "My Fertilizer Issue History & Digital Receipts" %}
-    </h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse text-sm sm:text-base">
-        <thead>
-          <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "Receipt No" %}</th>
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "ASC Centre" %}</th>
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "Quantity" %}</th>
-            <th class="p-3 font-bold whitespace-nowrap">{% trans "Date" %}</th>
-            <th class="p-3 font-bold whitespace-nowrap text-right">{% trans "Action" %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for dist in issue_history %}
-          <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-            <td class="p-3 font-mono font-bold text-emerald-800 whitespace-nowrap">
-              {{ dist.receipt_number }}
-            </td>
-            <td class="p-3 whitespace-nowrap">{{ dist.asc_centre.name }}</td>
-            <td class="p-3 whitespace-nowrap font-bold text-slate-800">
-              {{ dist.quantity_kg }} kg ({{ dist.batch.product.name }})
-            </td>
-            <td class="p-3 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
-              {{ dist.distributed_at|date:"Y-m-d H:i" }}
-            </td>
-            <td class="p-3 whitespace-nowrap text-right">
-              <a
-                href="{% url 'distribution_receipt' dist.receipt_number %}"
-                target="_blank"
-                class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1 shadow-sm"
-              >
-                <span>🖨️</span>
-                <span>{% trans "View Receipt" %}</span>
-              </a>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="p-4 text-center text-slate-500">
-              {% trans "No fertilizer distributions recorded yet." %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- Section 3: Farmer Issue History & Digital Receipts (Mobile Card Stack) -->
+  <section id="section-receipts" class="scroll-mt-4 bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h2 class="text-lg sm:text-xl font-black text-slate-800 flex items-center gap-2">
+        <span aria-hidden="true">📜</span>
+        <span>{% trans "My Fertilizer Issue History & Digital Receipts" %}</span>
+      </h2>
     </div>
-  </div>
+
+    <div class="space-y-3">
+      {% for dist in issue_history %}
+      <article class="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-mono font-black text-sm bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+              {{ dist.receipt_number }}
+            </span>
+            <span class="text-xs font-medium text-slate-500">
+              {{ dist.distributed_at|date:"Y-m-d H:i" }}
+            </span>
+          </div>
+          <div class="text-base font-extrabold text-slate-900">
+            {{ dist.quantity_kg }} kg &bull; {{ dist.batch.product.name }}
+          </div>
+          <div class="text-xs sm:text-sm text-slate-600 flex items-center gap-1">
+            <span aria-hidden="true">🏛️</span>
+            <span>{{ dist.asc_centre.name }}</span>
+          </div>
+        </div>
+
+        <a
+          href="{% url 'distribution_receipt' dist.receipt_number %}"
+          target="_blank"
+          class="touch-target w-full sm:w-auto min-h-[48px] bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white text-sm font-bold px-5 py-2.5 rounded-xl transition inline-flex items-center justify-center gap-2 shadow-sm shrink-0"
+        >
+          <span aria-hidden="true">🖨️</span>
+          <span>{% trans "View Receipt" %}</span>
+        </a>
+      </article>
+      {% empty %}
+      <div class="p-6 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+        {% trans "No fertilizer distributions recorded yet." %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
 
 </div>
 
-<!-- Controlled Accessibility Font Size Script -->
+<!-- Fixed Mobile Bottom Thumb Navigation Bar (Visible on phones < 640px) -->
+<nav aria-label="{% trans 'Mobile Bottom Navigation' %}" class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] safe-bottom-bar pt-2 grid grid-cols-3 gap-2">
+  <a
+    href="#section-qr"
+    class="touch-target flex flex-col items-center justify-center py-1.5 rounded-xl text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 font-bold text-xs gap-0.5"
+  >
+    <span class="text-xl" aria-hidden="true">📱</span>
+    <span>{% trans "QR Code" %}</span>
+  </a>
+  <a
+    href="#section-quotas"
+    class="touch-target flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 font-bold text-xs gap-0.5"
+  >
+    <span class="text-xl" aria-hidden="true">🌾</span>
+    <span>{% trans "Quotas" %}</span>
+  </a>
+  <a
+    href="#section-receipts"
+    class="touch-target flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 font-bold text-xs gap-0.5"
+  >
+    <span class="text-xl" aria-hidden="true">🧾</span>
+    <span>{% trans "Receipts" %}</span>
+  </a>
+</nav>
+
+<!-- Accessible Font Size Toggle Script -->
 <script>
-  function toggleLargeFont() {
+  function applyFontState(isLarge) {
     const app = document.getElementById("farmer-app");
-    if (app.classList.contains("text-base")) {
+    const btn = document.getElementById("font-toggle-btn");
+    if (isLarge) {
       app.classList.remove("text-base");
       app.classList.add("text-lg");
+      if (btn) btn.setAttribute("aria-pressed", "true");
     } else {
       app.classList.remove("text-lg");
       app.classList.add("text-base");
+      if (btn) btn.setAttribute("aria-pressed", "false");
     }
   }
+
+  function toggleLargeFont() {
+    const app = document.getElementById("farmer-app");
+    const nextLarge = app.classList.contains("text-base");
+    applyFontState(nextLarge);
+    try {
+      localStorage.setItem("fertitracker_large_font", nextLarge ? "1" : "0");
+    } catch (e) {}
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    try {
+      if (localStorage.getItem("fertitracker_large_font") === "1") {
+        applyFontState(true);
+      }
+    } catch (e) {}
+  });
 </script>
 {% endblock %}

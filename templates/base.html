@@ -4,7 +4,7 @@
 <html lang="{{ CURRENT_LANGUAGE }}">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>{% trans "FertiTracker" %} - {% trans "Fertilizer Traceability System" %}</title>
 
     <!-- Local Offline Tailwind CSS (Runs with zero internet during Expo demo) -->
@@ -14,12 +14,34 @@
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}" />
 
     <style>
+      html {
+        scroll-behavior: smooth;
+      }
       body {
         font-family: 'Inter', 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Nirmala UI', 'Iskoola Pota', 'Latha', system-ui, -apple-system, sans-serif;
+        overflow-wrap: anywhere;
+      }
+      h1, h2, h3 {
+        text-wrap: balance;
+      }
+      p, li {
+        text-wrap: pretty;
       }
       /* Ensure minimum touch target for mobile friendliness and non-tech users */
       .touch-target {
-        min-height: 48px;
+        min-block-size: 48px;
+        min-inline-size: 48px;
+      }
+      @media (pointer: coarse) {
+        :where(button, [role="button"], nav a) {
+          min-block-size: 44px;
+          min-inline-size: 44px;
+        }
+      }
+      .safe-bottom-bar {
+        padding-bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+        padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+        padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
       }
     </style>
   </head>

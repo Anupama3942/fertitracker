@@ -600,4 +600,40 @@ msgstr "මම මුල් ජාතික හැඳුනුම්පත ප�
 msgid "Your session has expired due to inactivity, or login is required. Please sign in again to continue."
 msgstr "අක්‍රියතාව නිසා ඔබගේ සැසිය කල් ඉකුත් වී ඇත. කරුණාකර නැවත ඇතුල් වන්න."
 
+msgid "Quick Actions"
+msgstr "ඉක්මන් ක්‍රියා"
+
+msgid "Get QR Code"
+msgstr "QR කේතය ලබා ගන්න"
+
+msgid "My Quotas"
+msgstr "මගේ කෝටාවන්"
+
+msgid "My Receipts"
+msgstr "මගේ රිසිට්පත්"
+
+msgid "Expired — Please generate a new QR code"
+msgstr "කල් ඉකුත් වී ඇත — කරුණාකර නව QR කේතයක් සාදන්න"
+
+msgid "Available"
+msgstr "ලබා ගත හැකිය"
+
+msgid "Completed"
+msgstr "සම්පූර්ණයි"
+
+msgid "Remaining"
+msgstr "ඉතිරිව ඇති ප්‍රමාණය"
+
+msgid "Mobile Bottom Navigation"
+msgstr "ජංගම පහළ සංචාලනය"
+
+msgid "QR Code"
+msgstr "QR කේතය"
+
+msgid "Quotas"
+msgstr "කෝටාවන්"
+
+msgid "Receipts"
+msgstr "රිසිට්පත්"
+
 

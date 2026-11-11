@@ -600,4 +600,40 @@ msgstr "நான் அசல் தேசிய அடையாள அட்�
 msgid "Your session has expired due to inactivity, or login is required. Please sign in again to continue."
 msgstr "செயலற்ற தன்மை காரணமாக உங்கள் அமர்வு காலாவதியானது. தயவுசெய்து மீண்டும் உள்நுழையவும்."
 
+msgid "Quick Actions"
+msgstr "விரைவுச் செயல்கள்"
+
+msgid "Get QR Code"
+msgstr "QR குறியீட்டைப் பெறுக"
+
+msgid "My Quotas"
+msgstr "எனது ஒதுக்கீடுகள்"
+
+msgid "My Receipts"
+msgstr "எனது இரசீதுகள்"
+
+msgid "Expired — Please generate a new QR code"
+msgstr "காலாவதியானது — தயவுசெய்து புதிய QR குறியீட்டை உருவாக்கவும்"
+
+msgid "Available"
+msgstr "கிடைக்கக்கூடியது"
+
+msgid "Completed"
+msgstr "நிறைவடைந்தது"
+
+msgid "Remaining"
+msgstr "மீதமுள்ளது"
+
+msgid "Mobile Bottom Navigation"
+msgstr "மொபைல் கீழ் வழிசெலுத்தல்"
+
+msgid "QR Code"
+msgstr "QR குறியீடு"
+
+msgid "Quotas"
+msgstr "ஒதுக்கீடுகள்"
+
+msgid "Receipts"
+msgstr "இரசீதுகள்"
+
 
