@@ -99,7 +99,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6" class="p-4 text-center text-slate-500">
+          <td colspan="{% if is_asc_head %}7{% else %}6{% endif %}" class="p-4 text-center text-slate-500">
             No confirmed ASC stock available yet.
           </td>
         </tr>
@@ -155,8 +155,13 @@
             <a
               href="{% url 'receive_dispatch' d.id %}"
               class="text-emerald-700 hover:underline font-medium"
-              >View / Receive →</a
             >
+              {% if d.status == 'DISPATCHED' and user.role == 'ASC_OFFICER' or d.status == 'DISPATCHED' and user.role == 'ADMIN' or d.status == 'DISPATCHED' and user.is_superuser %}
+                Receive Stock &rarr;
+              {% else %}
+                View Manifest &rarr;
+              {% endif %}
+            </a>
           </td>
         </tr>
         {% empty %}

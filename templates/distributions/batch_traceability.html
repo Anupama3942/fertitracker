@@ -251,9 +251,13 @@
           {% for dist in farmer_distributions %}
           <tr class="border-b border-slate-100 hover:bg-slate-50">
             <td class="p-2.5 font-mono font-bold">
+              {% if user.role == 'WAREHOUSE_OFFICER' %}
+                <span class="text-slate-700">{{ dist.receipt_number }}</span>
+              {% else %}
               <a href="{% url 'distribution_receipt' dist.receipt_number %}" class="text-emerald-700 hover:underline">
                 {{ dist.receipt_number }}
               </a>
+              {% endif %}
             </td>
             <td class="p-2.5 font-medium text-slate-800">{{ dist.farmer.full_name }}</td>
             <td class="p-2.5 font-mono text-slate-500">{{ dist.farmer.masked_nic }}</td>
@@ -302,7 +306,7 @@
             <td class="p-2.5 text-center font-black font-mono text-rose-800">{{ wo.quantity_kg }} kg</td>
             <td class="p-2.5 text-slate-700">{{ wo.notes }}</td>
             <td class="p-2.5 font-mono">{{ wo.created_by.username|default:"ASC Head" }}</td>
-            <td class="p-2.5 text-slate-500 font-mono">{{ wo.timestamp|date:"Y-m-d H:i" }}</td>
+            <td class="p-2.5 text-slate-500 font-mono">{{ wo.created_at|date:"Y-m-d H:i" }}</td>
           </tr>
           {% endfor %}
         </tbody>

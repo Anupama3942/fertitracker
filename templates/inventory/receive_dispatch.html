@@ -66,6 +66,10 @@
       <span class="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full uppercase">
         {% trans "Read-Only (Receiving Completed)" %}
       </span>
+      {% elif not can_receive %}
+      <span class="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full uppercase">
+        {% trans "Read-Only (In Transit — Awaiting ASC Receiving)" %}
+      </span>
       {% endif %}
     </div>
 
@@ -97,7 +101,7 @@
 
               <!-- Good Received Bags -->
               <td class="p-3 text-center">
-                {% if dispatch.status == 'DISPATCHED' %}
+                {% if dispatch.status == 'DISPATCHED' and can_receive %}
                 <input
                   type="number"
                   name="received_{{ item.id }}"
@@ -108,6 +112,8 @@
                   required
                   class="good-input w-28 border-2 border-emerald-500 rounded-xl px-3 py-2.5 text-center font-bold text-base font-mono outline-none focus:ring-2 focus:ring-emerald-200"
                 />
+                {% elif dispatch.status == 'DISPATCHED' %}
+                <span class="text-slate-400 font-mono text-sm">&mdash;</span>
                 {% else %}
                 <span class="font-bold font-mono text-emerald-700 text-base">{{ item.received_bags }}</span>
                 {% endif %}
@@ -115,7 +121,7 @@
 
               <!-- Damaged Bags -->
               <td class="p-3 text-center">
-                {% if dispatch.status == 'DISPATCHED' %}
+                {% if dispatch.status == 'DISPATCHED' and can_receive %}
                 <input
                   type="number"
                   name="damaged_{{ item.id }}"
@@ -126,6 +132,8 @@
                   required
                   class="damaged-input w-28 border-2 border-amber-400 rounded-xl px-3 py-2.5 text-center font-bold text-base font-mono outline-none focus:ring-2 focus:ring-amber-200"
                 />
+                {% elif dispatch.status == 'DISPATCHED' %}
+                <span class="text-slate-400 font-mono text-sm">&mdash;</span>
                 {% else %}
                 <span class="font-bold font-mono text-amber-700 text-base">{{ item.damaged_bags }}</span>
                 {% endif %}
@@ -133,8 +141,10 @@
 
               <!-- Missing Bags (Calculated Live) -->
               <td class="p-3 text-center font-black font-mono text-base text-rose-600" id="missing_{{ item.id }}">
-                {% if dispatch.status == 'DISPATCHED' %}
+                {% if dispatch.status == 'DISPATCHED' and can_receive %}
                 0
+                {% elif dispatch.status == 'DISPATCHED' %}
+                <span class="text-slate-400 font-normal">&mdash;</span>
                 {% else %}
                 {{ item.missing_bags }}
                 {% endif %}
@@ -146,7 +156,7 @@
       </div>
 
       <!-- Discrepancy Reason Field (Shown dynamically when damaged > 0 or missing > 0) -->
-      {% if dispatch.status == 'DISPATCHED' %}
+      {% if dispatch.status == 'DISPATCHED' and can_receive %}
       <div id="discrepancy-reason-box" class="hidden bg-amber-50 border-2 border-amber-300 p-5 rounded-2xl space-y-2">
         <label for="discrepancy_reason" class="block text-sm font-black text-amber-900">
           ⚠️ {% trans "Discrepancy Incident Reason (Mandatory)" %}:
@@ -176,7 +186,6 @@
       </div>
 
       <!-- Submit Button -->
-      {% if user.role in 'ADMIN,ASC_OFFICER' %}
       <div class="pt-4 flex justify-end">
         <button
           type="submit"
@@ -186,7 +195,6 @@
           <span>{% trans "Confirm Receipt & Update ASC Usable Stock (Atomic)" %}</span>
         </button>
       </div>
-      {% endif %}
       {% endif %}
 
     </form>

@@ -636,4 +636,13 @@ msgstr "කෝටාවන්"
 msgid "Receipts"
 msgstr "රිසිට්පත්"
 
+msgid "Dashboard"
+msgstr "උපකරණ පුවරුව"
+
+msgid "Verification codes and SMS notices sent to your phone will appear here in Demo Mode."
+msgstr "ඔබගේ දුරකථනයට එවන ලද සත්‍යාපන කේත සහ SMS පණිවිඩ Demo ප්‍රකාරයේදී මෙහි දිස්වනු ඇත."
+
+msgid "Read-Only (In Transit — Awaiting ASC Receiving)"
+msgstr "කියවීමට පමණි (ප්‍රවාහනයේ පවතී — ASC භාරගැනීම බලාපොරොත්තුවෙන්)"
+
 

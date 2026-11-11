@@ -87,6 +87,7 @@
       <span>🖨️</span>
       <span>{% trans "Print Receipt" %}</span>
     </button>
+    {% if user.role == 'ASC_OFFICER' or user.role == 'ADMIN' or user.is_superuser %}
     <a
       href="{% url 'asc_scanner' %}"
       class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-3 rounded-xl shadow transition flex items-center justify-center gap-2"
@@ -94,6 +95,23 @@
       <span>📷</span>
       <span>{% trans "Counter Scanner" %}</span>
     </a>
+    {% elif user.role == 'FARMER' %}
+    <a
+      href="{% url 'farmer_dashboard' %}"
+      class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-3 rounded-xl shadow transition flex items-center justify-center gap-2"
+    >
+      <span>📱</span>
+      <span>{% trans "My QR & Quota" %}</span>
+    </a>
+    {% else %}
+    <a
+      href="{% url 'reports_search' %}"
+      class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-3 rounded-xl shadow transition flex items-center justify-center gap-2"
+    >
+      <span>📊</span>
+      <span>{% trans "Reports" %}</span>
+    </a>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

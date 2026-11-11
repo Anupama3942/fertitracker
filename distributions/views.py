@@ -128,6 +128,8 @@ def distribution_receipt_view(request, receipt_number):
         FertilizerDistribution.objects.select_related('farmer', 'asc_centre', 'batch__product', 'season', 'issued_by'),
         receipt_number=receipt_number
     )
+    if request.user.role == 'FARMER' and distribution.farmer.user_id != request.user.id:
+        return render(request, '403.html', status=403)
     return render(request, 'distributions/receipt.html', {'distribution': distribution})
 
 
@@ -256,7 +258,7 @@ def batch_traceability_view(request):
         write_offs = StockMovement.objects.filter(
             stock__batch=batch_obj,
             movement_type=StockMovement.MovementTypeChoices.WRITE_OFF
-        ).select_related('stock__asc_centre', 'created_by').order_by('-timestamp')
+        ).select_related('stock__asc_centre', 'created_by').order_by('-created_at')
         for wo in write_offs:
             wo_bags = int(wo.quantity_kg / bag_weight) if bag_weight else 0
             total_written_off_bags += wo_bags
@@ -981,6 +983,14 @@ def demo_sms_inbox_view(request):
 
     phone_filter = request.GET.get('phone', '').strip()
     messages_qs = SMSOutbox.objects.select_related('farmer').order_by('-created_at')
+    if request.user.is_authenticated and request.user.role == 'FARMER':
+        farmer_profile = Farmer.objects.filter(user=request.user).first()
+        if farmer_profile:
+            messages_qs = messages_qs.filter(
+                Q(farmer=farmer_profile) | Q(phone_number=farmer_profile.mobile_number)
+            )
+        else:
+            messages_qs = messages_qs.none()
     if phone_filter:
         messages_qs = messages_qs.filter(phone_number__icontains=phone_filter)
 

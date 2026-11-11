@@ -140,11 +140,13 @@ def receive_dispatch_view(request, dispatch_id):
         except ValidationError as e:
             messages.error(request, e.message)
 
+    can_receive = request.user.role in ['ADMIN', 'ASC_OFFICER'] or request.user.is_superuser
     context = {
         'dispatch': dispatch,
         'items': items,
         'qr_base64': qr_base64,
         'discrepancies': dispatch.discrepancies.select_related('recorded_by').all(),
+        'can_receive': can_receive,
     }
     return render(request, 'inventory/receive_dispatch.html', context)
 

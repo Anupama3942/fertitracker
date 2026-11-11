@@ -49,13 +49,41 @@
     </form>
 
     <div class="flex gap-2">
+      {% if user.is_authenticated %}
+        {% if user.role == 'ASC_OFFICER' or user.role == 'ADMIN' or user.is_superuser %}
+        <a
+          href="{% url 'asc_scanner' %}"
+          class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
+        >
+          <span>📷</span>
+          <span>{% trans "ASC Scanner" %}</span>
+        </a>
+        {% elif user.role == 'FARMER' %}
+        <a
+          href="{% url 'farmer_dashboard' %}"
+          class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
+        >
+          <span>📱</span>
+          <span>{% trans "My QR & Quota" %}</span>
+        </a>
+        {% else %}
+        <a
+          href="{% url 'dashboard' %}"
+          class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
+        >
+          <span>🏠</span>
+          <span>{% trans "Dashboard" %}</span>
+        </a>
+        {% endif %}
+      {% else %}
       <a
-        href="{% url 'asc_scanner' %}"
+        href="{% url 'login' %}"
         class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
       >
-        <span>📷</span>
-        <span>{% trans "ASC Scanner" %}</span>
+        <span>🔐</span>
+        <span>{% trans "Login" %}</span>
       </a>
+      {% endif %}
       <a
         href="{% url 'demo_sms_inbox' %}"
         class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-1.5"
@@ -102,7 +130,11 @@
       <div class="p-8 text-center text-slate-500 space-y-2">
         <span class="text-3xl block">📭</span>
         <p class="font-bold text-base text-slate-700">{% trans "No SMS messages sent yet." %}</p>
+        {% if user.is_authenticated and user.role == 'ASC_OFFICER' or user.is_authenticated and user.role == 'ADMIN' or user.is_superuser %}
         <p class="text-xs text-slate-500">{% trans "Search a farmer under Farmer Search and click 'Send SMS Code' to test the simulation." %}</p>
+        {% else %}
+        <p class="text-xs text-slate-500">{% trans "Verification codes and SMS notices sent to your phone will appear here in Demo Mode." %}</p>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

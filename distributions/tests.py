@@ -1125,4 +1125,114 @@ class ExpiryBoundaryAndSafeguardTests(TestCase):
             self.assertIn("restricted to environments where DEMO_MODE=True", str(ctx.exception))
 
 
+class RoleBasedUIVisibilityTests(TestCase):
+    """Verify every role only sees UI links, buttons, and data relevant to its role."""
+
+    def setUp(self):
+        from inventory.models import StockDispatch, DispatchItem
+        self.client = Client()
+        self.asc = ASCCentre.objects.create(name="Vavuniya South ASC", district="Vavuniya", address="Main St")
+        self.wh = Warehouse.objects.create(name="Central Warehouse", location="Colombo")
+        self.season = Season.objects.create(name="Maha 2026/2027", start_date=date(2026, 10, 1), end_date=date(2027, 3, 31), status="ACTIVE")
+        self.product = FertilizerProduct.objects.create(name="Urea", bag_weight_kg=Decimal("50.00"))
+        self.batch = FertilizerBatch.objects.create(warehouse=self.wh, product=self.product, batch_number="UI-BATCH-1", expiry_date=date(2027, 12, 31))
+        self.stock = ASCStock.objects.create(asc_centre=self.asc, batch=self.batch, bags_on_hand=20)
+
+        self.wh_officer = User.objects.create_user(username="ui_wh", password="Password123!", role=User.RoleChoices.WAREHOUSE_OFFICER)
+        self.asc_officer = User.objects.create_user(username="ui_asc", password="Password123!", role=User.RoleChoices.ASC_OFFICER, asc_centre=self.asc)
+        self.auditor = User.objects.create_user(username="ui_aud", password="Password123!", role=User.RoleChoices.AUDITOR)
+        self.farmer_user1 = User.objects.create_user(username="199000001111", password="Password123!", role=User.RoleChoices.FARMER)
+        self.farmer_user2 = User.objects.create_user(username="199000002222", password="Password123!", role=User.RoleChoices.FARMER)
+
+        self.farmer1 = Farmer.objects.create(user=self.farmer_user1, full_name="Farmer One", nic_number="199000001111", mobile_number="0771001111")
+        self.farmer2 = Farmer.objects.create(user=self.farmer_user2, full_name="Farmer Two", nic_number="199000002222", mobile_number="0771002222")
+
+        FarmerEntitlement.objects.create(farmer=self.farmer1, season=self.season, product=self.product, approved_kg=Decimal("50.00"), remaining_kg=Decimal("50.00"))
+        self.dist1 = FertilizerDistribution.objects.create(
+            receipt_number="RCP-UI-0001", farmer=self.farmer1, season=self.season,
+            asc_centre=self.asc, batch=self.batch, quantity_kg=Decimal("50.00"),
+            issue_method=FertilizerDistribution.IssueMethodChoices.QR, issued_by=self.asc_officer
+        )
+        self.dispatch = StockDispatch.objects.create(warehouse=self.wh, asc_centre=self.asc, dispatch_reference="DISP-UI-01", created_by=self.wh_officer)
+        self.dispatch_item = DispatchItem.objects.create(dispatch=self.dispatch, batch=self.batch, dispatched_bags=10)
+
+        SMSOutbox.objects.create(farmer=self.farmer1, phone_number="0771001111", message="Farmer One Secret Code 111222")
+        SMSOutbox.objects.create(farmer=self.farmer2, phone_number="0771002222", message="Farmer Two Secret Code 999888")
+
+    def test_farmer_does_not_see_scanner_or_other_farmers_data(self):
+        from django.test import override_settings
+        self.client.force_login(self.farmer_user1)
+
+        with override_settings(DEMO_MODE=True):
+            resp = self.client.get(reverse('demo_sms_inbox'))
+            self.assertEqual(resp.status_code, 200)
+            html = resp.content.decode()
+            self.assertNotIn(reverse('asc_scanner'), html)
+            self.assertNotIn('ASC Scanner', html)
+            self.assertIn(reverse('farmer_dashboard'), html)
+            self.assertIn('Farmer One Secret Code 111222', html)
+            self.assertNotIn('Farmer Two Secret Code 999888', html)
+
+        # Own receipt: no Counter Scanner button
+        receipt_resp = self.client.get(reverse('distribution_receipt', args=[self.dist1.receipt_number]))
+        self.assertEqual(receipt_resp.status_code, 200)
+        receipt_html = receipt_resp.content.decode()
+        self.assertNotIn(reverse('asc_scanner'), receipt_html)
+        self.assertNotIn('Counter Scanner', receipt_html)
+        self.assertIn(reverse('farmer_dashboard'), receipt_html)
+
+        # Other farmer cannot view farmer1's receipt
+        self.client.force_login(self.farmer_user2)
+        forbidden_resp = self.client.get(reverse('distribution_receipt', args=[self.dist1.receipt_number]))
+        self.assertEqual(forbidden_resp.status_code, 403)
+
+    def test_warehouse_officer_and_auditor_see_read_only_and_no_scanner_links(self):
+        for role_user in (self.wh_officer, self.auditor):
+            self.client.force_login(role_user)
+
+            inv_html = self.client.get(reverse('inventory_list')).content.decode()
+            self.assertNotIn('Receive Stock', inv_html)
+            self.assertIn('View Manifest', inv_html)
+            self.assertNotIn(reverse('asc_scanner'), inv_html)
+            self.assertNotIn(reverse('demo_sms_inbox'), inv_html)
+
+            disp_html = self.client.get(reverse('receive_dispatch', args=[self.dispatch.id])).content.decode()
+            self.assertNotIn('Confirm Receipt &amp; Update ASC Usable Stock', disp_html)
+            self.assertNotIn(f'name="received_{self.dispatch_item.id}"', disp_html)
+            self.assertIn('Read-Only', disp_html)
+
+        # Warehouse officer does not see clickable receipt 403 links in reports/traceability
+        self.client.force_login(self.wh_officer)
+        rep_html = self.client.get(reverse('reports_search')).content.decode()
+        self.assertNotIn(reverse('distribution_receipt', args=[self.dist1.receipt_number]), rep_html)
+        self.assertIn(self.dist1.receipt_number, rep_html)
+
+        trace_html = self.client.get(reverse('batch_traceability') + f'?batch_number={self.batch.batch_number}').content.decode()
+        self.assertNotIn(reverse('distribution_receipt', args=[self.dist1.receipt_number]), trace_html)
+
+        # Auditor on receipt sees Reports back button, not Counter Scanner
+        self.client.force_login(self.auditor)
+        aud_receipt_html = self.client.get(reverse('distribution_receipt', args=[self.dist1.receipt_number])).content.decode()
+        self.assertNotIn(reverse('asc_scanner'), aud_receipt_html)
+        self.assertIn(reverse('reports_search'), aud_receipt_html)
+
+    def test_asc_officer_sees_scanner_and_receiving_controls(self):
+        from django.test import override_settings
+        self.client.force_login(self.asc_officer)
+
+        with override_settings(DEMO_MODE=True):
+            inbox_html = self.client.get(reverse('demo_sms_inbox')).content.decode()
+            self.assertIn(reverse('asc_scanner'), inbox_html)
+
+        inv_html = self.client.get(reverse('inventory_list')).content.decode()
+        self.assertIn('Receive Stock', inv_html)
+
+        disp_html = self.client.get(reverse('receive_dispatch', args=[self.dispatch.id])).content.decode()
+        self.assertIn(f'name="received_{self.dispatch_item.id}"', disp_html)
+
+        receipt_html = self.client.get(reverse('distribution_receipt', args=[self.dist1.receipt_number])).content.decode()
+        self.assertIn(reverse('asc_scanner'), receipt_html)
+
+
+
 

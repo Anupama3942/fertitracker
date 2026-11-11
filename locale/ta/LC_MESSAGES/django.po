@@ -636,4 +636,13 @@ msgstr "ஒதுக்கீடுகள்"
 msgid "Receipts"
 msgstr "இரசீதுகள்"
 
+msgid "Dashboard"
+msgstr "முகப்புப் பலகை"
+
+msgid "Verification codes and SMS notices sent to your phone will appear here in Demo Mode."
+msgstr "உங்கள் கைபேசிக்கு அனுப்பப்பட்ட சரிபார்ப்புக் குறியீடுகள் மற்றும் SMS அறிவிப்புகள் Demo பயன்முறையில் இங்கே தோன்றும்."
+
+msgid "Read-Only (In Transit — Awaiting ASC Receiving)"
+msgstr "படிக்க மட்டும் (பயணத்தில் உள்ளது — ASC பெறுதலை எதிர்பார்க்கிறது)"
+
 
