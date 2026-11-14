@@ -645,4 +645,17 @@ msgstr "ඔබගේ දුරකථනයට එවන ලද සත්‍ය�
 msgid "Read-Only (In Transit — Awaiting ASC Receiving)"
 msgstr "කියවීමට පමණි (ප්‍රවාහනයේ පවතී — ASC භාරගැනීම බලාපොරොත්තුවෙන්)"
 
+msgid "How to get fertilizer in 3 simple steps:"
+msgstr "පොහොර ලබාගැනීමට සරල පියවර 3:"
+
+msgid "Tap 'Get QR Code' below"
+msgstr "පහත ඇති 'QR කේතය ලබා ගන්න' ඔබන්න"
+
+msgid "Show QR or 6-digit code to officer"
+msgstr "QR කේතය හෝ අංක 6 නිලධාරියාට පෙන්වන්න"
+
+msgid "Collect fertilizer & SMS receipt"
+msgstr "පොහොර සහ SMS රිසිට්පත ලබාගන්න"
+
+
 
