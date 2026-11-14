@@ -777,7 +777,7 @@ class FEFOExpiryAndWriteOffTests(TestCase):
                 head_user=self.officer,
                 reason="Disposal required"
             )
-        self.assertIn("Only an authorized ASC Head or Administrator", str(ctx.exception))
+        self.assertIn("Only an authorized ASC Head", str(ctx.exception))
 
         # Unexpired stock cannot be written off as expired
         with self.assertRaises(ValidationError) as ctx:

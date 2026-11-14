@@ -657,5 +657,32 @@ msgstr "QR அல்லது 6 இலக்கக் குறியீட்�
 msgid "Collect fertilizer & SMS receipt"
 msgstr "உரத்தையும் SMS இரசீதையும் பெற்றுக்கொள்ளுங்கள்"
 
+msgid "You do not have permission to access this resource."
+msgstr "இந்த ஆதாரத்தை அணுக உங்களுக்கு அனுமதி இல்லை."
+
+msgid "Auditors have read-only access. Modification requests are prohibited."
+msgstr "கணக்காய்வாளர்களுக்கு வாசிப்பு அனுமதி மட்டுமே உள்ளது. மாற்றக் கோரிக்கைகள் தடைசெய்யப்பட்டுள்ளன."
+
+msgid "This action is strictly restricted to Agrarian Service Centre Heads."
+msgstr "இந்த நடவடிக்கை கமநல சேவை நிலைய தலைவர்களுக்கு மட்டுமே கண்டிப்பாக கட்டுப்படுத்தப்பட்டுள்ளது."
+
+msgid "Only officers of the destination ASC may receive a dispatch."
+msgstr "இலக்கு கமநல சேவை நிலையத்தின் அதிகாரிகள் மட்டுமே விநியோகத்தைப் பெற்றுக்கொள்ள முடியும்."
+
+msgid "Only the authorized ASC Head of this ASC Centre may write off expired stock."
+msgstr "இந்த நிலையத்தின் அங்கீகரிக்கப்பட்ட ASC தலைவரால் மட்டுமே காலாவதியான இருப்பை நீக்க முடியும்."
+
+msgid "Two-Officer Rule Violation: You cannot approve this request."
+msgstr "இரு அலுவலர் விதி மீறல்: இந்த கோரிக்கையை நீங்கள் அங்கீகரிக்க முடியாது."
+
+msgid "Two-Officer Rule Violation: You cannot reject this request."
+msgstr "இரு அலுவலர் விதி மீறல்: இந்த கோரிக்கையை நீங்கள் நிராகரிக்க முடியாது."
+
+msgid "You can only issue fertilizer for your assigned Agrarian Service Centre."
+msgstr "உங்களுக்கு ஒதுக்கப்பட்ட கமநல சேவை நிலையத்திற்கு மட்டுமே நீங்கள் உரங்களை வழங்க முடியும்."
+
+msgid "Only counter officers at the Agrarian Service Centre may update farmer phone numbers following in-person NIC verification."
+msgstr "நேரடி அடையாள அட்டை சரிபார்ப்பைத் தொடர்ந்து கமநல சேவை நிலையத்தின் கவுண்டர் அதிகாரிகளால் மட்டுமே விவசாயியின் கைபேசி எண்ணைப் புதுப்பிக்க முடியும்."
+
 
 

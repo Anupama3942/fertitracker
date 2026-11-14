@@ -55,7 +55,7 @@
     {% if DEMO_MODE %}
     <div class="bg-amber-400 text-amber-950 text-xs py-1 px-4 font-bold text-center border-b border-amber-500 shadow-sm print:hidden flex flex-wrap items-center justify-center gap-2">
       <span>⚠️ <strong>{% trans "DEMO PROTOTYPE MODE" %}</strong> &bull; {% trans "TICT3153 Project (University of Vavuniya / ICT Expo 5.0). SMS simulated." %}</span>
-      {% if not user.is_authenticated or user.role == 'FARMER' or user.role == 'ASC_OFFICER' or user.role == 'ADMIN' or user.is_superuser %}
+      {% if not user.is_authenticated or user.role == 'FARMER' or user.role == 'ASC_OFFICER' %}
       <a href="{% url 'demo_sms_inbox' %}" class="underline text-amber-900 hover:text-black">💬 {% trans "View Simulated SMS Inbox" %}</a>
       {% endif %}
     </div>
@@ -135,7 +135,7 @@
           {% endif %}
 
           <!-- ASC Officer navigation -->
-          {% if user.role == 'ASC_OFFICER' or user.role == 'ADMIN' or user.is_superuser %}
+          {% if user.role == 'ASC_OFFICER' %}
           <a
             href="{% url 'asc_scanner' %}"
             class="bg-amber-500 hover:bg-amber-600 text-slate-900 px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 shadow-sm"
@@ -154,6 +154,9 @@
           >
             📝 {% trans "Assisted" %}
           </a>
+          {% endif %}
+
+          {% if user.role == 'ASC_OFFICER' or user.role == 'ADMIN' or user.is_superuser %}
           <a
             href="{% url 'manage_farmers' %}"
             class="bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-medium transition"
@@ -195,7 +198,7 @@
           {% endif %}
 
           <!-- Demo SMS Inbox Link (Visible when DEMO_MODE and relevant to role) -->
-          {% if DEMO_MODE and user.role != 'WAREHOUSE_OFFICER' and user.role != 'AUDITOR' %}
+          {% if DEMO_MODE and user.role == 'ASC_OFFICER' %}
           <a
             href="{% url 'demo_sms_inbox' %}"
             class="bg-amber-400/30 hover:bg-amber-400/50 text-amber-200 border border-amber-400/50 px-2.5 py-1.5 rounded-lg text-xs font-mono transition flex items-center gap-1"

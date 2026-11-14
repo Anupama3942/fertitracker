@@ -39,7 +39,7 @@ All concurrency, row-locking, and transaction tests run against a live **Postgre
 
 ---
 
-## 2. Test Cases Registry (60 Test Cases)
+## 2. Test Cases Registry (79 Test Cases)
 
 | ID | Module | Test Class | Test Name | Purpose & Business Rule Verified | Status |
 |---|---|---|---|---|---|
@@ -103,6 +103,25 @@ All concurrency, row-locking, and transaction tests run against a live **Postgre
 | **TC-58** | `distributions` | `CSVExportBOMTests` | `test_reports_csv_export_has_utf8_bom` | Exported reports CSV begins with UTF-8 BOM (`\ufeff`) for proper Excel Unicode rendering. | PASS |
 | **TC-59** | `distributions` | `BatchTraceabilityTests` | `test_batch_trace_reconciliation_math` | Batch lifecycle reconciles: Dispatched = Received + Damaged + Missing + In Transit. | PASS |
 | **TC-60** | `distributions` | `RoleAccessSecurityTests` | `test_auditor_post_request_rejected` | Auditor attempting POST actions on operational endpoints receives HTTP 403 Forbidden. | PASS |
+| **TC-61** | `accounts` | `RoleBasedAccessControlTests` | `test_admin_forbidden_from_receiving_dispatch` | Administrator POST to `receive_dispatch` returns HTTP 403 Forbidden. | PASS |
+| **TC-62** | `accounts` | `RoleBasedAccessControlTests` | `test_admin_forbidden_from_qr_scanner` | Administrator accessing QR scanner receives HTTP 403 Forbidden. | PASS |
+| **TC-63** | `accounts` | `RoleBasedAccessControlTests` | `test_admin_forbidden_from_farmer_search_and_sms_code` | Administrator accessing farmer search or sending SMS code receives HTTP 403. | PASS |
+| **TC-64** | `accounts` | `RoleBasedAccessControlTests` | `test_admin_forbidden_from_assisted_issue_request_and_approval` | Administrator creating or approving assisted issues receives HTTP 403. | PASS |
+| **TC-65** | `accounts` | `RoleBasedAccessControlTests` | `test_admin_forbidden_from_stock_write_off` | Administrator attempting stock write-off receives HTTP 403 Forbidden. | PASS |
+| **TC-66** | `accounts` | `RoleBasedAccessControlTests` | `test_admin_forbidden_from_create_batch_and_dispatch` | Administrator creating batch or dispatch receives HTTP 403 (Warehouse only). | PASS |
+| **TC-67** | `accounts` | `RoleBasedAccessControlTests` | `test_warehouse_officer_forbidden_from_receiving` | Warehouse Officer confirming dispatch receipt receives HTTP 403 Forbidden. | PASS |
+| **TC-68** | `accounts` | `RoleBasedAccessControlTests` | `test_warehouse_officer_forbidden_from_counter_and_farmer_functions` | Warehouse Officer accessing scanner, search, or assisted requests receives HTTP 403. | PASS |
+| **TC-69** | `accounts` | `RoleBasedAccessControlTests` | `test_auditor_forbidden_from_write_operations` | Auditor POST/write to all endpoints returns HTTP 403 (Read-Only enforcement). | PASS |
+| **TC-70** | `accounts` | `RoleBasedAccessControlTests` | `test_asc_officer_from_another_asc_forbidden_from_receiving` | ASC Officer receiving dispatch of another ASC centre returns HTTP 403 (BR-02). | PASS |
+| **TC-71** | `accounts` | `RoleBasedAccessControlTests` | `test_regular_asc_officer_forbidden_from_approval_and_write_off` | Regular ASC Officer without head authority receives HTTP 403 for approvals & write-offs. | PASS |
+| **TC-72** | `accounts` | `RoleBasedAccessControlTests` | `test_asc_head_cannot_approve_own_assisted_request` | Two-Officer Rule: ASC Head cannot approve their own assisted request (HTTP 403). | PASS |
+| **TC-73** | `accounts` | `RoleBasedAccessControlTests` | `test_asc_head_cannot_write_off_stock_of_different_asc` | ASC Head cannot write off stock of another ASC centre (HTTP 403). | PASS |
+| **TC-74** | `accounts` | `RoleBasedAccessControlTests` | `test_asc_head_approves_assisted_request_of_different_officer` | ASC Head successfully approves assisted issue requested by another officer. | PASS |
+| **TC-75** | `accounts` | `RoleBasedAccessControlTests` | `test_menu_visibility_for_administrator` | Dynamic navbar hides operational touch targets and tools from Administrator. | PASS |
+| **TC-76** | `accounts` | `RoleBasedAccessControlTests` | `test_menu_visibility_for_warehouse_officer` | Dynamic navbar shows only warehouse/inventory tools to Warehouse Officer. | PASS |
+| **TC-77** | `accounts` | `RoleBasedAccessControlTests` | `test_menu_visibility_for_asc_officer` | Dynamic navbar shows counter/scanner tools to ASC Officer and hides admin/audit tools. | PASS |
+| **TC-78** | `accounts` | `RoleBasedAccessControlTests` | `test_menu_visibility_for_auditor` | Dynamic navbar shows read-only reports/audit logs to Auditor. | PASS |
+| **TC-79** | `accounts` | `RoleBasedAccessControlTests` | `test_menu_visibility_for_farmer` | Dynamic navbar shows only personal QR and quota to Farmer. | PASS |
 
 ---
 

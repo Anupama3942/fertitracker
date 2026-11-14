@@ -657,5 +657,32 @@ msgstr "QR කේතය හෝ අංක 6 නිලධාරියාට පෙ
 msgid "Collect fertilizer & SMS receipt"
 msgstr "පොහොර සහ SMS රිසිට්පත ලබාගන්න"
 
+msgid "You do not have permission to access this resource."
+msgstr "මෙම සම්පත වෙත ප්‍රවේශ වීමට ඔබට අවසර නොමැත."
+
+msgid "Auditors have read-only access. Modification requests are prohibited."
+msgstr "විගණකවරුන්ට ඇත්තේ කියවීමේ ප්‍රවේශය පමණි. වෙනස් කිරීමේ ඉල්ලීම් තහනම්ය."
+
+msgid "This action is strictly restricted to Agrarian Service Centre Heads."
+msgstr "මෙම ක්‍රියාව ගොවිජන සේවා මධ්‍යස්ථාන ප්‍රධානීන්ට පමණක් සීමා වේ."
+
+msgid "Only officers of the destination ASC may receive a dispatch."
+msgstr "නියමිත ගොවිජන සේවා මධ්‍යස්ථානයේ නිලධාරීන්ට පමණක් භාණ්ඩ තොගය භාරගත හැකිය."
+
+msgid "Only the authorized ASC Head of this ASC Centre may write off expired stock."
+msgstr "මෙම මධ්‍යස්ථානයේ බලයලත් ASC ප්‍රධානියාට පමණක් කල් ඉකුත් වූ තොග ඉවත් කළ හැකිය."
+
+msgid "Two-Officer Rule Violation: You cannot approve this request."
+msgstr "නිලධාරීන් දෙදෙනෙකුගේ නීතිය උල්ලංඝනය කිරීමකි: ඔබට මෙම ඉල්ලීම අනුමත කළ නොහැක."
+
+msgid "Two-Officer Rule Violation: You cannot reject this request."
+msgstr "නිලධාරීන් දෙදෙනෙකුගේ නීතිය උල්ලංඝනය කිරීමකි: ඔබට මෙම ඉල්ලීම ප්‍රතික්ෂේප කළ නොහැක."
+
+msgid "You can only issue fertilizer for your assigned Agrarian Service Centre."
+msgstr "ඔබට පොහොර නිකුත් කළ හැක්කේ ඔබට අනුයුක්ත ගොවිජන සේවා මධ්‍යස්ථානය සඳහා පමණි."
+
+msgid "Only counter officers at the Agrarian Service Centre may update farmer phone numbers following in-person NIC verification."
+msgstr "ජාතික හැඳුනුම්පත පෞද්ගලිකව තහවුරු කිරීමෙන් පසු ගොවිජන සේවා මධ්‍යස්ථානයේ කවුන්ටර නිලධාරීන්ට පමණක් ගොවි දුරකථන අංක යාවත්කාලීන කළ හැකිය."
+
 
 

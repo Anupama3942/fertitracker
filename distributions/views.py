@@ -12,7 +12,8 @@ from django.utils.translation import gettext as _
 from django.conf import settings
 from django.db import transaction
 
-from accounts.decorators import role_required
+from accounts.decorators import role_required, require_asc_head, forbid_response
+from accounts.permissions import can_approve_assisted_request
 from accounts.models import User
 from core.models import Season, FertilizerProduct, ASCCentre
 from core.validators import validate_sri_lankan_nic, validate_sri_lankan_phone
@@ -61,7 +62,7 @@ def farmer_qr_dashboard(request):
     return render(request, 'distributions/farmer_dashboard.html', context)
 
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@role_required('ASC_OFFICER')
 def asc_scanner_view(request):
     """
     Allow an ASC officer to scan/enter a farmer QR or 6-digit code.
@@ -744,6 +745,9 @@ def manage_farmers_and_bulk_import_view(request):
 
         # C. Phone Number Update by ASC Officer (Requires In-Person NIC Verification, Masked Audit Log)
         elif action == 'update_phone':
+            if request.user.role != 'ASC_OFFICER':
+                return forbid_response(request, _("Only counter officers at the Agrarian Service Centre may update farmer phone numbers following in-person NIC verification."))
+
             nic = request.POST.get('nic_number', '').strip()
             new_mobile = request.POST.get('new_mobile', '').strip()
             reason = request.POST.get('reason', 'In-person NIC verification at ASC').strip()
@@ -920,7 +924,7 @@ def edit_entitlement_view(request, entitlement_id):
 # PART 1: SMS BACKUP CODE (Keypad Phone Farmers)
 # ==============================================================================
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@role_required('ASC_OFFICER')
 def farmer_search_view(request):
     """
     Search farmers by NIC or name for Keypad Phone SMS Code or Officer-Assisted Issue.
@@ -942,7 +946,7 @@ def farmer_search_view(request):
     return render(request, 'distributions/farmer_search.html', context)
 
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@role_required('ASC_OFFICER')
 def send_sms_code_view(request, farmer_id):
     """
     Generates a 6-digit backup code and sends via SMS to the farmer's registered phone number.
@@ -1005,7 +1009,7 @@ def demo_sms_inbox_view(request):
 # PART 2: OFFICER-ASSISTED ISSUE (Farmers with No Phone)
 # ==============================================================================
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@role_required('ASC_OFFICER')
 def create_assisted_request_view(request, farmer_id):
     """
     Create an Officer-Assisted Issue request for a farmer with no phone,
@@ -1050,7 +1054,7 @@ def create_assisted_request_view(request, farmer_id):
     return render(request, 'distributions/create_assisted_request.html', context)
 
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@role_required('ASC_OFFICER')
 def pending_assisted_requests_view(request):
     """
     Dashboard for pending and approved assisted issues at the ASC Centre.
@@ -1070,7 +1074,7 @@ def pending_assisted_requests_view(request):
     approved_requests = qs.filter(status=AssistedIssueApproval.StatusChoices.APPROVED, expires_at__gt=now)
     recent_history = qs.exclude(status__in=[AssistedIssueApproval.StatusChoices.PENDING, AssistedIssueApproval.StatusChoices.APPROVED])[:20]
 
-    is_head = getattr(request.user, 'is_asc_head', False) or request.user.role == 'ADMIN' or request.user.is_superuser
+    is_head = getattr(request.user, 'is_asc_head', False) and request.user.role == 'ASC_OFFICER'
 
     context = {
         'pending_requests': pending_requests,
@@ -1081,14 +1085,18 @@ def pending_assisted_requests_view(request):
     return render(request, 'distributions/pending_assisted_requests.html', context)
 
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@require_asc_head
 def approve_assisted_request_view(request, request_id):
     """
     Approve an assisted issue request under the Two-Officer Rule.
-    Enforces requester != approver and approver is ASC Head.
+    Enforces requester != approver and approver is ASC Head of the same ASC.
     """
     if request.method != 'POST':
         return redirect('pending_assisted_requests')
+
+    approval = get_object_or_404(AssistedIssueApproval, id=request_id)
+    if not can_approve_assisted_request(request.user, approval):
+        return forbid_response(request, _("Two-Officer Rule Violation: You cannot approve this request."))
 
     from .services import approve_assisted_issue_request
     try:
@@ -1100,11 +1108,15 @@ def approve_assisted_request_view(request, request_id):
     return redirect('pending_assisted_requests')
 
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@require_asc_head
 def reject_assisted_request_view(request, request_id):
     """Reject an assisted issue request with an optional note."""
     if request.method != 'POST':
         return redirect('pending_assisted_requests')
+
+    approval = get_object_or_404(AssistedIssueApproval, id=request_id)
+    if not can_approve_assisted_request(request.user, approval):
+        return forbid_response(request, _("Two-Officer Rule Violation: You cannot reject this request."))
 
     rejection_reason = request.POST.get('rejection_reason', '').strip()
     from .services import reject_assisted_issue_request
@@ -1117,7 +1129,7 @@ def reject_assisted_request_view(request, request_id):
     return redirect('pending_assisted_requests')
 
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@role_required('ASC_OFFICER')
 def assisted_issue_confirm_view(request, approval_id):
     """
     Confirmation screen for issuing fertilizer under an approved assisted issue.
@@ -1126,6 +1138,9 @@ def assisted_issue_confirm_view(request, approval_id):
         AssistedIssueApproval.objects.select_related('farmer', 'asc_centre', 'season', 'approved_by'),
         id=approval_id
     )
+
+    if request.user.asc_centre_id != approval.asc_centre_id:
+        return forbid_response(request, _("You can only issue fertilizer for your assigned Agrarian Service Centre."))
 
     if not approval.is_valid_for_issue():
         messages.error(request, "This approval is no longer valid or has expired.")

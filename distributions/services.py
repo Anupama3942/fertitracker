@@ -274,26 +274,18 @@ def approve_assisted_issue_request(request_id, approving_user):
     """
     Approve an assisted issue request under the Two-Officer Rule.
     Enforces:
-    - Approver must be ASC Head (is_asc_head=True or Admin).
+    - Approver must be ASC Head (is_asc_head=True).
     - Approver cannot be the same officer who requested (requester != approver).
     - Approver must belong to the same ASC.
     - Request must be PENDING and within the 30-minute validity period.
     """
     approval = AssistedIssueApproval.objects.select_for_update().get(id=request_id)
 
-    # Two-Officer Rule: requester cannot approve own request
-    if approval.requested_by == approving_user:
-        raise ValidationError("Two-Officer Rule Violation: You cannot approve your own assisted issue request.")
-
-    # Must be ASC Head
-    is_head = getattr(approving_user, 'is_asc_head', False) or approving_user.role == 'ADMIN' or approving_user.is_superuser
-    if not is_head:
+    from accounts.permissions import can_approve_assisted_request
+    if not can_approve_assisted_request(approving_user, approval):
+        if approval.requested_by == approving_user:
+            raise ValidationError("Two-Officer Rule Violation: You cannot approve your own assisted issue request.")
         raise ValidationError("Only an authorized ASC Head can approve assisted issue requests.")
-
-    # Must belong to the same ASC Centre
-    if approving_user.role != 'ADMIN' and not approving_user.is_superuser:
-        if approving_user.asc_centre != approval.asc_centre:
-            raise ValidationError("You can only approve requests for your assigned Agrarian Service Centre.")
 
     if approval.status != AssistedIssueApproval.StatusChoices.PENDING:
         raise ValidationError(f"This request cannot be approved because it is already {approval.get_status_display()}.")
@@ -321,13 +313,11 @@ def reject_assisted_issue_request(request_id, rejecting_user, rejection_reason="
     """Reject a pending assisted issue request."""
     approval = AssistedIssueApproval.objects.select_for_update().get(id=request_id)
 
-    is_head = getattr(rejecting_user, 'is_asc_head', False) or rejecting_user.role == 'ADMIN' or rejecting_user.is_superuser
-    if not is_head:
-        raise ValidationError("Only an authorized ASC Head can reject assisted issue requests.")
-
-    if rejecting_user.role != 'ADMIN' and not rejecting_user.is_superuser:
-        if rejecting_user.asc_centre != approval.asc_centre:
-            raise ValidationError("You can only reject requests for your assigned Agrarian Service Centre.")
+    from accounts.permissions import can_approve_assisted_request
+    if not can_approve_assisted_request(rejecting_user, approval):
+        if approval.requested_by == rejecting_user:
+            raise ValidationError("Two-Officer Rule Violation: You cannot reject your own assisted issue request.")
+        raise ValidationError("Only an authorized ASC Head of the same ASC can reject assisted issue requests.")
 
     if approval.status != AssistedIssueApproval.StatusChoices.PENDING:
         raise ValidationError(f"This request is already {approval.get_status_display()}.")
@@ -370,6 +360,8 @@ def confirm_issue_distribution(raw_input_string=None, asc_officer_user=None, sea
         approval = AssistedIssueApproval.objects.select_for_update().get(id=assisted_approval_id)
         if not approval.is_valid_for_issue():
             raise ValidationError("This assisted issue approval is not active or has expired.")
+        if asc_officer_user.role != 'ASC_OFFICER' or asc_officer_user.asc_centre != approval.asc_centre:
+            raise ValidationError("Only an officer from this ASC can issue fertilizer for an assisted approval.")
 
         farmer = approval.farmer
         season_id = approval.season_id
@@ -389,14 +381,9 @@ def confirm_issue_distribution(raw_input_string=None, asc_officer_user=None, sea
             issue_method = FertilizerDistribution.IssueMethodChoices.QR
 
         # Verify officer ASC assignment
-        if (asc_officer_user.role in ['ASC_OFFICER', 'ADMIN'] or asc_officer_user.is_superuser) and asc_officer_user.asc_centre:
-            asc_centre = asc_officer_user.asc_centre
-        elif asc_officer_user.role == 'ADMIN' or asc_officer_user.is_superuser:
-            asc_centre = ASCCentre.objects.first()
-            if not asc_centre:
-                raise ValidationError("No ASC Centre is configured in the system.")
-        else:
+        if asc_officer_user.role != 'ASC_OFFICER' or not asc_officer_user.asc_centre:
             raise ValidationError("Only an officer from the relevant ASC can issue fertilizer.")
+        asc_centre = asc_officer_user.asc_centre
 
     # Verify active season
     season_obj = Season.objects.filter(id=season_id).first()

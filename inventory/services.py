@@ -37,8 +37,9 @@ def confirm_dispatch_receiving(dispatch_id, officer_user, received_bags_dict, da
     if dispatch.status != StockDispatch.StatusChoices.DISPATCHED:
         raise ValidationError("This dispatch has already been received and confirmed.")
 
-    if officer_user.role == 'ASC_OFFICER' and officer_user.asc_centre != dispatch.asc_centre:
-        raise ValidationError("You are only authorized to receive stock for your assigned ASC.")
+    from accounts.permissions import can_receive_dispatch
+    if not can_receive_dispatch(officer_user, dispatch):
+        raise ValidationError("Only officers of the destination ASC may receive a dispatch.")
 
     has_discrepancy = False
     total_damaged = 0
@@ -159,15 +160,10 @@ def write_off_expired_stock(stock_id, head_user, reason, bags_to_write_off=None)
 
     stock = ASCStock.objects.select_for_update().get(id=stock_id)
 
-    # 1. Permission check: ASC Head or Admin
-    is_head = getattr(head_user, 'is_asc_head', False) or head_user.role == 'ADMIN' or head_user.is_superuser
-    if not is_head:
-        raise ValidationError("Only an authorized ASC Head or Administrator can write off expired stock.")
-
-    # 2. Centre check
-    if head_user.role != 'ADMIN' and not head_user.is_superuser:
-        if head_user.asc_centre != stock.asc_centre:
-            raise ValidationError("You can only write off stock for your assigned Agrarian Service Centre.")
+    # 1. Permission check: ASC Head of the stock's ASC Centre
+    from accounts.permissions import can_write_off_stock
+    if not can_write_off_stock(head_user, stock):
+        raise ValidationError("Only an authorized ASC Head of this ASC Centre can write off expired stock.")
 
     # 3. Expiry check: Must be expired
     today = timezone.localdate()

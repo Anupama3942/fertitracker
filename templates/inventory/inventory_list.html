@@ -8,7 +8,7 @@
       End-to-End Warehouse to ASC Stock Traceability (with FEFO Expiry Alerts)
     </p>
   </div>
-  {% if user.role == 'ADMIN' or user.role == 'WAREHOUSE_OFFICER' %}
+  {% if user.role == 'WAREHOUSE_OFFICER' %}
   <div class="flex gap-3">
     <a
       href="{% url 'create_batch' %}"
@@ -156,7 +156,7 @@
               href="{% url 'receive_dispatch' d.id %}"
               class="text-emerald-700 hover:underline font-medium"
             >
-              {% if d.status == 'DISPATCHED' and user.role == 'ASC_OFFICER' or d.status == 'DISPATCHED' and user.role == 'ADMIN' or d.status == 'DISPATCHED' and user.is_superuser %}
+              {% if d.status == 'DISPATCHED' and user.role == 'ASC_OFFICER' and user.asc_centre == d.asc_centre %}
                 Receive Stock &rarr;
               {% else %}
                 View Manifest &rarr;

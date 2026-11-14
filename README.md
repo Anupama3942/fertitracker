@@ -142,6 +142,29 @@ cloudflared tunnel --url http://127.0.0.1:8000
 
 ---
 
+### 🛡️ Role-Based Access Control (RBAC) & Separation of Duties Matrix
+
+FertiTracker strictly enforces the Principle of Least Privilege and Separation of Duties (SRS BR-02, FR-12) centrally defined in [`accounts/permissions.py`](accounts/permissions.py):
+
+| Function / Capability | Administrator | Warehouse Officer | ASC Officer | ASC Head | Auditor | Farmer |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Manage Users & Reset Passwords** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Toggle Seasons (Maha/Yala)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Farmer Quota CSV Import & Edit** | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **Register Batches & Dispatches** | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **View Inventory & Dispatches** | ✅ *(Read-Only)* | ✅ | ✅ | ✅ | ✅ *(Read-Only)* | ❌ |
+| **Confirm Dispatch Receipt (BR-02)** | ❌ | ❌ | ✅ *(Assigned ASC)* | ✅ *(Assigned ASC)* | ❌ | ❌ |
+| **Scan Farmer QR & Counter Issue** | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **Find Farmer & Send SMS Code** | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **Request Officer-Assisted Issue** | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **Approve Assisted Issue (Two-Officer)** | ❌ | ❌ | ❌ | ✅ *(Different Person)* | ❌ | ❌ |
+| **Write Off Expired Stock** | ❌ | ❌ | ❌ | ✅ *(Assigned ASC)* | ❌ | ❌ |
+| **Audit Logs & Exception Reports** | ✅ *(Read-Only)* | ❌ | ❌ | ❌ | ✅ *(Read-Only)* | ❌ |
+| **Personal QR, Quotas & Receipts** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **POST/Write Operations Permitted** | ✅ *(Admin only)* | ✅ *(WH only)* | ✅ *(ASC only)* | ✅ *(Head only)* | ❌ *(Refused 403)* | ✅ *(Own QR)* |
+
+---
+
 ## 🚀 Key Functional Features & Architecture
 
 ### 1. Expiry & Stock Alerts (FEFO)

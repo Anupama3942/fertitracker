@@ -5,7 +5,9 @@ from django.http import HttpResponse
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
-from accounts.decorators import role_required
+from accounts.decorators import role_required, require_asc_head, forbid_response
+from accounts.permissions import can_write_off_stock
+from django.utils.translation import gettext as _
 from core.models import Warehouse, ASCCentre, FertilizerProduct
 from .models import FertilizerBatch, StockDispatch, DispatchItem, ASCStock, StockMovement
 from .services import generate_qr_base64, confirm_dispatch_receiving
@@ -36,7 +38,7 @@ def inventory_list_view(request):
             stock.expiry_label = ''
             stock.expiry_badge_class = ''
 
-    is_asc_head = getattr(user, 'is_asc_head', False) or user.role == 'ADMIN' or user.is_superuser
+    is_asc_head = user.role == 'ASC_OFFICER' and getattr(user, 'is_asc_head', False)
 
     context = {
         'dispatches': dispatches,
@@ -49,7 +51,7 @@ def inventory_list_view(request):
     return render(request, 'inventory/inventory_list.html', context)
 
 
-@role_required('ADMIN', 'WAREHOUSE_OFFICER')
+@role_required('WAREHOUSE_OFFICER')
 def create_batch_view(request):
     """Create a unique fertilizer batch and render the batch form."""
     if request.method == 'POST':
@@ -77,7 +79,7 @@ def create_batch_view(request):
     return render(request, 'inventory/create_batch.html', context)
 
 
-@role_required('ADMIN', 'WAREHOUSE_OFFICER')
+@role_required('WAREHOUSE_OFFICER')
 def create_dispatch_view(request):
     """Create a warehouse-to-ASC dispatch and redirect to its receiving page."""
     if request.method == 'POST':
@@ -113,6 +115,10 @@ def create_dispatch_view(request):
 @role_required('ADMIN', 'WAREHOUSE_OFFICER', 'ASC_OFFICER', 'AUDITOR')
 def receive_dispatch_view(request, dispatch_id):
     """Display a dispatch and process its received, damaged, and missing quantities."""
+    from accounts.permissions import can_receive_dispatch
+    from accounts.decorators import forbid_response
+    from django.utils.translation import gettext as _
+
     dispatch = get_object_or_404(
         StockDispatch.objects.select_related('warehouse', 'asc_centre', 'created_by'),
         id=dispatch_id
@@ -121,9 +127,8 @@ def receive_dispatch_view(request, dispatch_id):
     qr_base64 = generate_qr_base64(dispatch.dispatch_reference)
 
     if request.method == 'POST':
-        if request.user.role not in ['ADMIN', 'ASC_OFFICER']:
-            messages.error(request, "Only an ASC officer can confirm that the stock has been received.")
-            return redirect('receive_dispatch', dispatch_id=dispatch.id)
+        if not can_receive_dispatch(request.user, dispatch):
+            return forbid_response(request, _("Only officers of the destination ASC may receive a dispatch."))
 
         received_dict = {}
         damaged_dict = {}
@@ -140,7 +145,7 @@ def receive_dispatch_view(request, dispatch_id):
         except ValidationError as e:
             messages.error(request, e.message)
 
-    can_receive = request.user.role in ['ADMIN', 'ASC_OFFICER'] or request.user.is_superuser
+    can_receive = can_receive_dispatch(request.user, dispatch) and dispatch.status == StockDispatch.StatusChoices.DISPATCHED
     context = {
         'dispatch': dispatch,
         'items': items,
@@ -212,14 +217,22 @@ def discrepancy_report_view(request):
     return render(request, 'inventory/discrepancy_report.html', context)
 
 
-@role_required('ADMIN', 'ASC_OFFICER')
+@require_asc_head
 def write_off_expired_stock_view(request, stock_id):
     """
-    Expired Stock Write-Off Action (ASC Head & Admin only).
+    Expired Stock Write-Off Action (ASC Head only for their assigned ASC).
     Deducts expired bags using an append-only WRITE_OFF StockMovement and AuditLog.
     """
     if request.method != 'POST':
         return redirect('inventory_list')
+
+    stock = get_object_or_404(
+        ASCStock.objects.select_related('batch__product', 'asc_centre'),
+        id=stock_id
+    )
+
+    if not can_write_off_stock(request.user, stock):
+        return forbid_response(request, _("Only the authorized ASC Head of this ASC Centre may write off expired stock."))
 
     reason = request.POST.get('reason', '').strip()
     bags_input = request.POST.get('bags')

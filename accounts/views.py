@@ -97,7 +97,7 @@ def dashboard_view(request):
         return redirect('farmer_dashboard')
 
     today = timezone.localdate()
-    is_asc_head = getattr(user, 'is_asc_head', False) or user.role == 'ADMIN' or user.is_superuser
+    is_asc_head = user.role == 'ASC_OFFICER' and getattr(user, 'is_asc_head', False)
     active_seasons = Season.objects.filter(status='ACTIVE')
     open_season = active_seasons.first()
 
@@ -145,7 +145,7 @@ def dashboard_view(request):
     }
 
     # 1. ASC OFFICER & ASC HEAD Context
-    if user.role in ['ASC_OFFICER', 'ADMIN'] or user.is_superuser:
+    if user.role == 'ASC_OFFICER':
         dist_qs = FertilizerDistribution.objects.select_related('farmer', 'asc_centre', 'batch__product')
         if asc_filter:
             dist_qs = dist_qs.filter(asc_centre=asc_filter)
@@ -176,7 +176,7 @@ def dashboard_view(request):
         })
 
     # 2. WAREHOUSE OFFICER Context
-    if user.role in ['WAREHOUSE_OFFICER', 'ADMIN'] or user.is_superuser:
+    if user.role == 'WAREHOUSE_OFFICER':
         wh_dispatches = StockDispatch.objects.select_related('warehouse', 'asc_centre', 'created_by').order_by('-dispatched_at')
         if getattr(user, 'warehouse', None) and user.role == 'WAREHOUSE_OFFICER':
             wh_dispatches = wh_dispatches.filter(warehouse=user.warehouse)
